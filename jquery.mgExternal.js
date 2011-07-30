@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.1
+ * mgExternal 1.0.2
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -426,8 +426,6 @@ mgExternal.prototype = {
 				.appendTo(this.$container)
 				.append(this.$content);
 
-			this.settings.tooltip.position = this.settings.tooltip.position.split(' ');
-
 			if (this.settings.tooltip.bind == 'hover') {
 				this.$container.bind('mouseenter', $.proxy(function(){this.show(this.settings.showDelay)}, this));
 				this.$container.bind('mouseleave', $.proxy(function(){this.hide(this.settings.hideDelay)}, this));
@@ -534,8 +532,8 @@ mgExternal.prototype = {
 		    distance = this.settings.tooltip.distance,
 		    arrowSize = this.settings.tooltip.arrowSize;
 
-		position = position || this.settings.tooltip.position[0];
-		modifier = modifier || this.settings.tooltip.position[1];
+		position = position || this.settings.tooltip.position.split(' ')[0];
+		modifier = modifier || this.settings.tooltip.position.split(' ')[1];
 		changeCount = changeCount || 0;
 
 		if (arrowSize) {
