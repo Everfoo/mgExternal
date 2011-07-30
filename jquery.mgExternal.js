@@ -1,0 +1,682 @@
+/**
+ * mgExternal 1.0.1
+ * www.magicalglobe.com/projects/mgExternal
+ *
+ * Copyright 2011 Ricard Osorio Mañanas
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ */
+
+jQuery.fn.mgExternal = function(defaultContent, options) {
+	return this.each(function(){
+		jQuery(this).data('mgExternal', mgExternal(this, defaultContent, options));
+	});
+};
+
+window.mgExternal = function(trigger, defaultContent, options) {
+
+	// Don't require `new`
+	if (!(this instanceof mgExternal))
+		return new mgExternal(trigger, defaultContent, options);
+
+	// trigger is optional when used only once. Eg: mgExternal("Hi!");
+	if (trigger.tagName == undefined) {
+		options = defaultContent;
+		defaultContent = trigger;
+		trigger = null;
+	}
+
+	// No defaultContent is required, as long as settings.ajaxUrl or href
+	// attribute are provided
+	if (typeof defaultContent == 'object') {
+		options = defaultContent;
+		defaultContent = null;
+	}
+
+	// Default settings
+	this.settings = {
+
+		// Core
+		display: 'modal', // modal, tooltip or inline
+		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>').html(defaultContent),
+		auto: !trigger, // Auto-open, default false if a trigger exists
+		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
+		autoFocus: true, // Auto-focus first input element
+		outsideClose: true, // Hide container when a click occurs outside
+		escClose: true, // Hide container when the ESC key is pressed
+		destroyOnClose: !trigger, // Destroy all generated elements and remove bindings
+
+		// Appearance
+		dataCss: {}, // Custom data CSS
+		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
+		showDelay: 0, // Show delay in ms
+		hideDelay: 0, // Hide delay in ms
+
+		// Ajax
+		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
+		ajaxData: {
+			ajax: 'true', // Might be useful for backend detection. Not required
+			referer: window.location.pathname // Useful for statistics. Not Required
+		},
+
+		// Modal settings
+		modal: {
+			overlayColor: null, // Default color is set in the CSS file
+			overlayOpacity: 0.7 // Opacity from 0 to 1
+		},
+
+		// Tooltip settings
+		tooltip: {
+			bind: 'click', // click, hover or focus
+			position: 'top center', // top/bottom left/center/right, or left/right top/middle/bottom
+			distance: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 0 : 15,
+			arrowSize: 9, // Arrow size in pixels
+			arrowBorderColor: null, // Default border color is set in the CSS file,
+			fitWindow: true
+		},
+
+		// Callbacks
+		onCreate: function(){},
+		onBeforeShow: function(){}, // returning false prevents opening
+		onShow: function(){},
+		onBeforeClose: function(){}, // returning false prevents closing
+		onClose: function(){},
+		onDestroy: function(){},
+		onContentReady: function(){
+			// Sample action
+			this.$content.setPlugins();
+		},
+		onJsonData: function(data) {
+			// Sample actions
+			if (data.reload) {
+				window.location.reload();
+			} else if (data.redirect) {
+				window.location.replace(base_url+data.redirect);
+			}
+		}
+	};
+
+	// data-mg-external HTML attributes are a valid alternate method of
+	// passing options
+	$.extend(true, this.settings, options, $(trigger).data('mgExternal'));
+
+	// Internal jQuery elements
+	this.$trigger = $(trigger);
+	this.$container = null;
+	this.$data = null;
+	this.$content = this.settings.content;
+
+	this.$modalOverlay = null;
+	this.$tooltipArrow = null;
+
+	// Private vars
+	this._defaultContent = defaultContent;
+	this._defaultAjaxUrl = this.settings.ajaxUrl;
+	this._defaultAjaxData = this.settings.ajaxData;
+	this._isContentLoaded = !!this.$content.html();
+	this._show = false;
+
+	// Set trigger bindings
+	if (this.$trigger) {
+		var self = this;
+
+		switch (this.settings.display) {
+
+			case 'modal':
+				this.$trigger.bind('click', function(e){
+					self.show(self.settings.showDelay);
+					e.preventDefault();
+					e.stopPropagation();
+				});
+				break;
+
+			case 'tooltip':
+				switch (this.settings.tooltip.bind) {
+					case 'click':
+						this.$trigger.bind('click', function(e){
+							if (self.$container && self.$container.is(':visible')) {
+								self.hide(self.settings.hideDelay);
+							} else {
+								self.show(self.settings.showDelay);
+							}
+							e.preventDefault();
+							e.stopPropagation();
+						});
+						break;
+					case 'hover':
+						this.$trigger.bind({
+							mouseenter: function(){self.show(self.settings.showDelay)},
+							mouseleave: function(){self.hide(self.settings.hideDelay)},
+							mouseup: function(e){e.stopPropagation()}
+						});
+						break;
+					case 'focus':
+						this.$trigger.bind({
+							focus: function(){self.show(self.settings.showDelay)},
+							blur: function(){self.hide(self.settings.hideDelay)},
+							mouseup: function(e){e.stopPropagation()}
+						});
+						break;
+				}
+				break;
+
+			case 'inline':
+				this.bindSpecialActions();
+				break;
+		}
+	}
+
+	// Auto-open if set
+	if (this.settings.auto)
+		this.show();
+};
+
+mgExternal.prototype = {
+
+	show: function(delay) {
+
+		// Inline content cannot be shown/hidden, it's always visible
+		if (this.settings.display == 'inline')
+			return;
+
+		var self = this;
+
+		// Set show status to visible
+		this._show = true;
+
+		// Execute the real showing actions...
+		setTimeout(function(){
+
+			// ...only if show status is set to visible
+			if (self._show && self.settings.onBeforeShow.call(self) !== false) {
+
+				if (!self._isContentLoaded) {
+
+					self.settings.ajaxUrl = self._defaultAjaxUrl;
+					self.settings.ajaxData = self._defaultAjaxData;
+					self.loadContent(false, !self.$content.html() || !self._defaultContent);
+					self._isContentLoaded = true;
+
+				} else {
+
+					// If the container is not yet created, create it
+					if (!self.$container)
+						self.createElements();
+
+					// Fade container in, and call onShow. If it's a modal, fade
+					// overlay in before
+					var fadeInContainer = function(){
+						self.$container.fadeIn(300, function(){
+							self.settings.onShow.call(self);
+							//self.settings.onContentReady.call(self);
+
+							if (self.settings.autoFocus)
+								self.focus();
+						});
+					};
+					if (self.$modalOverlay) {
+						self.$modalOverlay.fadeIn(300, fadeInContainer);
+					} else {
+						fadeInContainer();
+					}
+
+					// Reposition the container
+					self.moveContainer();
+					self.$container.find('img').load(function(){
+						self.moveContainer();
+					});
+				}
+			}
+		}, delay);
+	},
+
+	hide: function(delay) {
+
+		// Inline content cannot be shown/hidden, it's always visible
+		if (this.settings.display == 'inline')
+			return;
+
+		var self = this;
+
+		// Set show status to not visible
+		this._show = false;
+
+		// Execute the real hiding actions...
+		setTimeout(function(){
+
+			// ...only if show status is set to not visible and the container
+			// has been created 94 65 65 201
+			if (!self._show && self.$container && self.settings.onBeforeClose.call(self) !== false) {
+
+				if (self.settings.renew)
+					self._isContentLoaded = false;
+
+				// Fade container out
+				self.$container.fadeOut(300, function(){
+
+					// If set to be destroyed, remove the content and bindings,
+					// and call onDestroy
+					if (self.settings.destroyOnClose)
+						self.destroy();
+
+					if (self.$modalOverlay) {
+						self.$modalOverlay.fadeOut(300, function(){
+							self.settings.onClose.call(self);
+						});
+					} else {
+						self.settings.onClose.call(self);
+					}
+				});
+			}
+		}, delay);
+	},
+
+	// TODO: remove bindings
+	destroy: function() {
+		if (self.$modalOverlay)
+			self.$modalOverlay.remove();
+		self.$container.remove();
+		self.settings.onDestroy.call(self);
+	},
+
+	bindSpecialActions: function() {
+		var self = this;
+		this.$content.find('form').bind('submit', function(e){
+			self.loadContent(true);
+			e.preventDefault();
+		});
+		this.$content.find('.mgExternal-reload').bind('click', function(e){
+			self.loadContent(true);
+			e.preventDefault();
+		});
+		this.$content.find('.mgExternal-redirect').bind('click', function(e){
+			self.settings.ajaxUrl = $(this).attr('href');
+			self.loadContent(false, true);
+			e.preventDefault();
+		});
+		this.$content.find('.mgExternal-close').bind('click', function(e){
+			self.hide();
+			e.preventDefault();
+		});
+	},
+
+	loadContent: function(submit, forceAjax) {
+		var self = this,
+		    form = this.$content.find('form');
+
+		if (submit) {
+			form.find(':input').each(function(){
+				if ($(this).is(':checkbox')) {
+					self.settings.ajaxData[$(this).attr('name')] = $(this).prop('checked') ? 1 : 0;
+				} else if ($(this).is(':radio')) {
+					if ($(this).prop('checked'))
+						self.settings.ajaxData[$(this).attr('name')] = $(this).val();
+				} else {
+					self.settings.ajaxData[$(this).attr('name')] = $(this).val();
+				}
+			});
+		}
+
+		if (submit || forceAjax /*|| (!submit && this.defaultContent && this.settings.ajaxUrl) || (!this.defaultContent && this.settings.display != 'inline')*/) {
+			if (submit && form.attr('enctype') == 'multipart/form-data') {
+				var iframeName = 'mgExternal-iframe'+Math.floor(Math.random()*99999);
+				$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="javascript:false;" style="display:none;"></iframe>')
+					.appendTo('body')
+					//.append(form.parent().html())
+					.bind('load', function(){
+						var contents = $(this).contents().find('body').contents();
+						if (contents.text() != 'false')
+							self.setContent($(this).contents().find('body').contents());
+					});
+				form.attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
+					.attr('target', iframeName)
+					.append('<input type="hidden" name="ajax" value="true" />')
+					.append('<input type="hidden" name="'+form.find(':submit').attr('name')+'" value="'+form.find(':submit').val()+'" />')
+					.unbind('submit')
+					.trigger('submit');
+			} else {
+				$.ajax({
+					url: this.settings.ajaxUrl || this.$trigger.attr('href'),
+					type: submit ? 'POST' : 'GET',
+					data: this.settings.ajaxData,
+					success: function(data){
+						if (typeof data == 'object') {
+							self.settings.onJsonData.call(self, data);
+						} else {
+							self.setContent(data);
+						}
+					},
+					error: function(jqXHR, textStatus, errorThrown){
+						self.setContent('<div class="notice alert" style="white-space:nowrap;">S\'ha produït un error - <a class="mgExternal-reload">Reintentar</a></div>');
+					}
+				});
+			}
+			form.find(':input').prop('disabled', true);
+		} else {
+			this.show();
+			this.bindSpecialActions();
+		}
+	},
+
+	// Sets the given content, opens and updates the container position, and
+	// binds special actions
+	setContent: function(data) {
+
+		this._isContentLoaded = true;
+
+		// We remove the margin for the first DIV element due to aesthetical
+		// reasons. If you wish to maintain those proportions, you should set
+		// the equivalent padding in settings.dataCss
+		this.$content
+			.html(data)
+			.find('> div')
+				.css('margin', '0');
+
+		this.settings.onContentReady.call(this);
+		
+		// We could call show() directly and not duplicate the code below,
+		// but as show() uses a setTimeout and therefore has a minimum delay of
+		// 1-10ms by design, an update in the content would have an unpleasant
+		// glitch in its positioning. Instead, we use moveContainer()
+		if (this.$container && this.$container.is(':visible')) {
+			if (this.settings.autoFocus)
+				this.focus();
+
+			this.moveContainer();
+		} else {
+			this.show();
+		}
+	
+		this.bindSpecialActions();
+
+		// TODO: revisit this feature
+		// $(document).trigger('mgExternal-ready').unbind('mgExternal-ready');
+	},
+
+	focus: function() {
+		var firstInput = this.$content.find('.form-item.alert :input:enabled:first');
+		if (firstInput.length == 0)
+			firstInput = this.$content.find(':input:enabled:first');
+		setTimeout(function(){
+			firstInput.trigger('focus');
+		}, 10);
+	},
+
+	createElements: function() {
+		var self = this;
+
+		if (!this.$container) {
+			this.$container = $('<div/>')
+				.addClass('mgExternal-container')
+				.addClass(this.settings.extraClass)
+				.css({
+					position: 'absolute',
+					zIndex: 999
+				})
+				.hide()
+				.appendTo('body')
+				.bind('mouseup', function(e){
+					e.stopPropagation(); // Required if outsideClose is set to true.
+										 // mouseup event is used instead of click
+										 // due to IE incompatibility
+				});
+
+			this.$data = $('<div/>')
+				.addClass('mgExternal-data')
+				.css(this.settings.dataCss)
+				.appendTo(this.$container)
+				.append(this.$content);
+
+			this.settings.tooltip.position = this.settings.tooltip.position.split(' ');
+
+			if (this.settings.tooltip.bind == 'hover') {
+				this.$container.bind('mouseenter', $.proxy(function(){this.show(this.settings.showDelay)}, this));
+				this.$container.bind('mouseleave', $.proxy(function(){this.hide(this.settings.hideDelay)}, this));
+			}
+
+			$(window).bind('resize', function(){self.moveContainer()});
+
+			// Hide on outside click or ESC
+			if (this.settings.outsideClose) {
+
+				// Actually using mouseup event due to IE incompatibility.
+				// Also using body instead of document as clicking on the scroll bar
+				// triggers the event on the latter, closing the container.
+				$('body').bind('mouseup', function(e){
+					if (e.which == 1)
+						self.hide();
+				});
+			}
+
+			if (this.settings.escClose) {
+				$(document).bind('keyup', function(e){
+					if (e.keyCode == 27)
+						self.hide();
+				});
+			}
+
+			self.settings.onCreate.call(self);
+		}
+
+		if (!this.$modalOverlay && this.settings.display == 'modal') {
+			this.$modalOverlay = $('<div/>')
+				.addClass('mgExternal-overlay')
+				.css({
+					background: this.settings.modal.overlayColor,
+					height: '100%',
+					left: 0,
+					opacity: this.settings.modal.overlayOpacity,
+					position: 'fixed',
+					top: 0,
+					width: '100%',
+					zIndex: 998
+				})
+				.hide()
+				.appendTo('body');
+		}
+
+		if (!this.$tooltipArrow && this.settings.display == 'tooltip' && this.settings.tooltip.arrowSize) {
+			this.$tooltipArrow = $('<div/>')
+				.addClass('mgExternal-arrow')
+				.css({
+					position: 'absolute'
+				})
+				.appendTo(this.$container)
+				.append($('<div/>')
+					.addClass('mgExternal-arrow-shadow')
+					.css({
+						borderColor: this.settings.tooltip.arrowBorderColor,
+						borderStyle: 'solid',
+						borderWidth: this.settings.tooltip.arrowSize
+					})
+				)
+				.append($('<div/>')
+					.addClass('mgExternal-arrow-front')
+					.css({
+						borderColor: this.$data.css('backgroundColor'),
+						borderStyle: 'solid',
+						position: 'absolute',
+						borderWidth: this.settings.tooltip.arrowSize
+					}
+				));
+		}
+	},
+
+	moveContainer: function() {
+		this.settings.display == 'tooltip' ? this.moveTooltip() : this.moveModal();
+	},
+
+	moveModal: function() {
+		var top = 0,
+		    left = 0,
+		    containerHeight = this.$container.outerHeight(true),
+		    containerWidth = this.$container.outerWidth(true);
+
+		if (containerHeight < $(window).height())
+			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2) - 15;
+		if (top < ($(document).scrollTop() + 15))
+			top = $(document).scrollTop() + 15;
+
+		left = ($(window).width() - containerWidth) / 2;
+		if (left < 15)
+			left = 15;
+
+		this.$container.css({top: top, left: left});
+	},
+
+	moveTooltip: function(position, modifier, changeCount) {
+		var top = 0,
+		    left = 0,
+		    containerHeight = this.$container.outerHeight(true),
+		    containerWidth = this.$container.outerWidth(true),
+		    offset = this.$trigger.offset(),
+		    triggerHeight = this.$trigger.outerHeight(),
+		    triggerWidth = this.$trigger.outerWidth(),
+		    distance = this.settings.tooltip.distance,
+		    arrowSize = this.settings.tooltip.arrowSize;
+
+		position = position || this.settings.tooltip.position[0];
+		modifier = modifier || this.settings.tooltip.position[1];
+		changeCount = changeCount || 0;
+
+		if (arrowSize) {
+			if (!this.$tooltipArrow)
+				this.createElements();
+
+			this.$tooltipArrow.show();
+			if (/top|bottom/.test(position)) {
+				this.$tooltipArrow.css({
+					height: arrowSize,
+					top: position == 'top' ? 'auto' : -arrowSize,
+					width: arrowSize*2
+				}).find('div').css({
+					borderLeftColor: 'transparent',
+					borderRightColor: 'transparent',
+					borderBottomWidth: position == 'top' ? 0 : arrowSize,
+					borderTopWidth: position == 'bottom' ? 0 : arrowSize
+				}).filter('.mgExternal-arrow-front').css({
+					left: 0,
+					top: (position == 'top' ? '-' : '')+this.$data.css('borderBottomWidth')
+				});
+			} else {
+				this.$tooltipArrow.css({
+					height: arrowSize*2,
+					left: position == 'left' ? 'auto' : -arrowSize,
+					right: position == 'right' ? 'auto' : -arrowSize,
+					width: arrowSize
+				}).find('div').css({
+					borderBottomColor: 'transparent',
+					borderTopColor: 'transparent',
+					borderLeftWidth: position == 'right' ? 0 : arrowSize,
+					borderRightWidth: position == 'left' ? 0 : arrowSize
+				}).filter('.mgExternal-arrow-front').css({
+					left: (position == 'left' ? '-' : '')+this.$data.css('borderBottomWidth'),
+					top: 0
+				});
+			}
+		} else if (this.$tooltipArrow) {
+			this.$tooltipArrow.hide();
+		}
+
+		switch (position) {
+			case 'top':
+				top = offset.top - containerHeight - arrowSize;
+				break;
+			case 'bottom':
+				top = offset.top + triggerHeight + arrowSize;
+				break;
+			case 'left':
+				left = offset.left - containerWidth - arrowSize;
+				break;
+			case 'right':
+				left = offset.left + triggerWidth + arrowSize;
+				break;
+		}
+
+		switch (modifier) {
+			case 'left':
+				if (this.$tooltipArrow && arrowSize) {
+					left = offset.left + (triggerWidth / 2) - distance - arrowSize;
+					this.$tooltipArrow.css({left: distance, right: 'auto'});
+				} else {
+					left = offset.left + distance;
+				}
+				break;
+			case 'center':
+				if (this.$tooltipArrow && arrowSize) {
+					left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
+					this.$tooltipArrow.css({left: (containerWidth / 2) - arrowSize, right: 'auto'});
+				} else {
+					left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
+				}
+				break;
+			case 'right':
+				if (this.$tooltipArrow && arrowSize) {
+					left = offset.left + (triggerWidth / 2) - containerWidth + distance + arrowSize;
+					this.$tooltipArrow.css({left: 'auto', right: distance});
+				} else {
+					left = offset.left + triggerWidth - containerWidth - distance;
+				}
+				break;
+			case 'top':
+				if (this.$tooltipArrow && arrowSize) {
+					top = offset.top + (triggerHeight / 2) - distance - arrowSize;
+					this.$tooltipArrow.css({bottom: 'auto', top: distance});
+				} else {
+					top = offset.top + distance;
+				}
+				break;
+			case 'middle':
+				if (this.$tooltipArrow && arrowSize) {
+					top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
+					this.$tooltipArrow.css({bottom: 'auto', top: (containerHeight / 2) - arrowSize});
+				} else {
+					top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
+				}
+				break;
+			case 'bottom':
+				if (this.$tooltipArrow && arrowSize) {
+					top = offset.top + (triggerHeight / 2) - containerHeight + distance + arrowSize;
+					this.$tooltipArrow.css({bottom: distance, top: 'auto'});
+				} else {
+					top = offset.top + triggerHeight - containerHeight - distance;
+				}
+				break;
+		}
+
+		if (this.settings.tooltip.fitWindow && changeCount < 10) {
+			// Left
+			if (left < 0) {
+				if (position == 'left')
+					return this.moveTooltip('right', modifier, changeCount+1);
+				if (/center|right/.test(modifier))
+					return this.moveTooltip(position, 'left', changeCount+1);
+			}
+
+			// Right
+			if ((left + containerWidth + 5) >= $(window).width()) {
+				if (position == 'right')
+					return this.moveTooltip('left', modifier, changeCount+1);
+				if (/center|left/.test(modifier))
+					return this.moveTooltip(position, 'right', changeCount+1);
+			}
+
+			// Top
+			if (top < ($(document).scrollTop() - 5)) {
+				if (position == 'top')
+					return this.moveTooltip('bottom', modifier, changeCount+1);
+				if (/middle|bottom/.test(modifier))
+					return this.moveTooltip(position, 'top', changeCount+1);
+			}
+
+			// Bottom
+			if ((top + containerHeight + 5) >= ($(window).height()+$(document).scrollTop())) {
+				if (position == 'bottom')
+					return this.moveTooltip('top', modifier, changeCount+1);
+				if (/middle|top/.test(modifier))
+					return this.moveTooltip(position, 'bottom', changeCount+1);
+			}
+		}
+
+		this.$container.css({top: top, left: left});
+	}
+};

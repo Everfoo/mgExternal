@@ -1,0 +1,53 @@
+/*** mgExternal ***/
+
+/* Overlay */
+.mgExternal-overlay {
+	background-color: #fff;
+	}
+
+/* Style: default modal (Google+) */
+.modal .mgExternal-data {
+	background-color: #fff;
+	border: 3px solid #aaa;
+	color: #000;
+	padding: 35px 40px;
+	}
+
+.boxshadow .modal .mgExternal-data {
+	border-width: 1px;
+	-webkit-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	   -moz-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	}
+
+/* Style: default tooltip (Google+) */
+.tooltip .mgExternal-data {
+	background-color: #fff;
+	border: 1px solid #bbb;
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+	        border-radius: 2px;
+	color: #000;
+	padding: 15px;
+	}
+
+.boxshadow .tooltip .mgExternal-data {
+	-webkit-box-shadow: 0 1px 5px #ccc;
+	   -moz-box-shadow: 0 1px 5px #ccc;
+	        box-shadow: 0 1px 5px #ccc;
+	}
+
+.tooltip .mgExternal-arrow-shadow {
+	border-color: #888;
+	}
+
+/* Style: tipsy */
+.tipsy .mgExternal-data {
+	background-color: #333;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+	color: #fff;
+	font-size: 11px;
+	padding: 8px 10px;
+	}
