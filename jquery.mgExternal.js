@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.2
+ * mgExternal 1.0.3
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -37,7 +37,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 		// Core
 		display: 'modal', // modal, tooltip or inline
-		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>').html(defaultContent),
+		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>').html(defaultContent || ""),
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
