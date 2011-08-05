@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.3
+ * mgExternal 1.0.4
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -85,7 +85,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			// Sample action
 			this.$content.setPlugins();
 		},
-		onJsonData: function(data) {
+		onJsonData: function(data){
 			// Sample actions
 			if (data.reload) {
 				window.location.reload();
@@ -111,8 +111,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	// Private vars
 	this._defaultContent = defaultContent;
 	this._defaultAjaxUrl = this.settings.ajaxUrl;
-	this._defaultAjaxData = this.settings.ajaxData;
 	this._isContentLoaded = !!this.$content.html();
+	this._lastSubmitName = null;
 	this._show = false;
 
 	// Set trigger bindings
@@ -192,7 +192,7 @@ mgExternal.prototype = {
 				if (!self._isContentLoaded) {
 
 					self.settings.ajaxUrl = self._defaultAjaxUrl;
-					self.settings.ajaxData = self._defaultAjaxData;
+					self._lastSubmitName = null;
 					self.loadContent(false, !self.$content.html() || !self._defaultContent);
 					self._isContentLoaded = true;
 
@@ -207,7 +207,6 @@ mgExternal.prototype = {
 					var fadeInContainer = function(){
 						self.$container.fadeIn(300, function(){
 							self.settings.onShow.call(self);
-							//self.settings.onContentReady.call(self);
 
 							if (self.settings.autoFocus)
 								self.focus();
@@ -281,7 +280,7 @@ mgExternal.prototype = {
 	bindSpecialActions: function() {
 		var self = this;
 		this.$content.find('form').bind('submit', function(e){
-			self.loadContent(true);
+			self.loadContent($(this));
 			e.preventDefault();
 		});
 		this.$content.find('.mgExternal-reload').bind('click', function(e){
@@ -301,17 +300,19 @@ mgExternal.prototype = {
 
 	loadContent: function(submit, forceAjax) {
 		var self = this,
-		    form = this.$content.find('form');
+		    form = (typeof submit == 'object') ? submit : this.$content.find('form'),
+		ajaxData = $.extend({}, self.settings.ajaxData);
 
 		if (submit) {
+			this._lastSubmitName = form.find('input[type="submit"]').attr('name');
 			form.find(':input').each(function(){
 				if ($(this).is(':checkbox')) {
-					self.settings.ajaxData[$(this).attr('name')] = $(this).prop('checked') ? 1 : 0;
+					ajaxData[$(this).attr('name')] = $(this).prop('checked') ? 1 : 0;
 				} else if ($(this).is(':radio')) {
 					if ($(this).prop('checked'))
-						self.settings.ajaxData[$(this).attr('name')] = $(this).val();
+						ajaxData[$(this).attr('name')] = $(this).val();
 				} else {
-					self.settings.ajaxData[$(this).attr('name')] = $(this).val();
+					ajaxData[$(this).attr('name')] = $(this).val();
 				}
 			});
 		}
@@ -337,7 +338,7 @@ mgExternal.prototype = {
 				$.ajax({
 					url: this.settings.ajaxUrl || this.$trigger.attr('href'),
 					type: submit ? 'POST' : 'GET',
-					data: this.settings.ajaxData,
+					data: ajaxData,
 					success: function(data){
 						if (typeof data == 'object') {
 							self.settings.onJsonData.call(self, data);
@@ -350,7 +351,7 @@ mgExternal.prototype = {
 					}
 				});
 			}
-			form.find(':input').prop('disabled', true);
+			this.$content.find(':input').prop('disabled', true);
 		} else {
 			this.show();
 			this.bindSpecialActions();
@@ -370,8 +371,6 @@ mgExternal.prototype = {
 			.html(data)
 			.find('> div')
 				.css('margin', '0');
-
-		this.settings.onContentReady.call(this);
 		
 		// We could call show() directly and not duplicate the code below,
 		// but as show() uses a setTimeout and therefore has a minimum delay of
@@ -382,6 +381,9 @@ mgExternal.prototype = {
 				this.focus();
 
 			this.moveContainer();
+		} else if (this.settings.display == 'inline') {
+			if (this.settings.autoFocus)
+				this.focus();
 		} else {
 			this.show();
 		}
@@ -390,12 +392,22 @@ mgExternal.prototype = {
 
 		// TODO: revisit this feature
 		// $(document).trigger('mgExternal-ready').unbind('mgExternal-ready');
+
+		this.settings.onContentReady.call(this);
 	},
 
 	focus: function() {
-		var firstInput = this.$content.find('.form-item.alert :input:enabled:first');
+
+		var form = this.$content.find('input[type="submit"][name="'+this._lastSubmitName+'"]').parents('form');
+
+		if (form.length == 0)
+			form = this.$content.find('form:first');
+
+		var firstInput = form.find('.form-item.alert :not(:radio):input:visible:enabled:first');
+
 		if (firstInput.length == 0)
-			firstInput = this.$content.find(':input:enabled:first');
+			firstInput = form.find(':not(:radio):input:visible:enabled:first');
+
 		setTimeout(function(){
 			firstInput.trigger('focus');
 		}, 10);
