@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.5
+ * mgExternal 1.0.6
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -649,35 +649,44 @@ mgExternal.prototype = {
 		}
 
 		if (this.settings.tooltip.fitWindow && changeCount < 10) {
-			// Left
+
+			// Left margin
 			if (left < 0) {
 				if (position == 'left')
 					return this.moveTooltip('right', modifier, changeCount+1);
-				if (/center|right/.test(modifier))
+				if (modifier == 'right')
+					return this.moveTooltip(position, 'center', changeCount+1);
+				if (modifier == 'center')
 					return this.moveTooltip(position, 'left', changeCount+1);
 			}
 
-			// Right
+			// Right margin
 			if ((left + containerWidth + 5) >= $(window).width()) {
 				if (position == 'right')
 					return this.moveTooltip('left', modifier, changeCount+1);
-				if (/center|left/.test(modifier))
+				if (modifier == 'left')
+					return this.moveTooltip(position, 'center', changeCount+1);
+				if (modifier == 'center')
 					return this.moveTooltip(position, 'right', changeCount+1);
 			}
 
-			// Top
+			// Top margin
 			if (top < ($(document).scrollTop() - 5)) {
 				if (position == 'top')
 					return this.moveTooltip('bottom', modifier, changeCount+1);
-				if (/middle|bottom/.test(modifier))
+				if (modifier == 'bottom')
+					return this.moveTooltip(position, 'middle', changeCount+1);
+				if (modifier == 'middle')
 					return this.moveTooltip(position, 'top', changeCount+1);
 			}
 
-			// Bottom
+			// Bottom margin
 			if ((top + containerHeight + 5) >= ($(window).height()+$(document).scrollTop())) {
 				if (position == 'bottom')
 					return this.moveTooltip('top', modifier, changeCount+1);
-				if (/middle|top/.test(modifier))
+				if (modifier == 'top')
+					return this.moveTooltip(position, 'middle', changeCount+1);
+				if (modifier == 'middle')
 					return this.moveTooltip(position, 'bottom', changeCount+1);
 			}
 		}
