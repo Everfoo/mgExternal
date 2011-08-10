@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.4
+ * mgExternal 1.0.5
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -68,8 +68,10 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		tooltip: {
 			bind: 'click', // click, hover or focus
 			position: 'top center', // top/bottom left/center/right, or left/right top/middle/bottom
-			distance: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 0 : 15,
+			positionFrom: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 'limit' : 'center', // center or limit
+			distance: 0,
 			arrowSize: 9, // Arrow size in pixels
+			arrowDistance: 15,
 			arrowBorderColor: null, // Default border color is set in the CSS file,
 			fitWindow: true
 		},
@@ -542,7 +544,8 @@ mgExternal.prototype = {
 		    triggerHeight = this.$trigger.outerHeight(),
 		    triggerWidth = this.$trigger.outerWidth(),
 		    distance = this.settings.tooltip.distance,
-		    arrowSize = this.settings.tooltip.arrowSize;
+		    arrowSize = this.settings.tooltip.arrowSize,
+		    arrowDistance = this.settings.tooltip.arrowDistance;
 
 		position = position || this.settings.tooltip.position.split(' ')[0];
 		modifier = modifier || this.settings.tooltip.position.split(' ')[1];
@@ -589,67 +592,59 @@ mgExternal.prototype = {
 
 		switch (position) {
 			case 'top':
-				top = offset.top - containerHeight - arrowSize;
+				top = offset.top - containerHeight - distance - arrowSize;
 				break;
 			case 'bottom':
-				top = offset.top + triggerHeight + arrowSize;
+				top = offset.top + triggerHeight + distance + arrowSize;
 				break;
 			case 'left':
-				left = offset.left - containerWidth - arrowSize;
+				left = offset.left - containerWidth - distance - arrowSize;
 				break;
 			case 'right':
-				left = offset.left + triggerWidth + arrowSize;
+				left = offset.left + triggerWidth + distance + arrowSize;
 				break;
 		}
 
 		switch (modifier) {
 			case 'left':
-				if (this.$tooltipArrow && arrowSize) {
-					left = offset.left + (triggerWidth / 2) - distance - arrowSize;
-					this.$tooltipArrow.css({left: distance, right: 'auto'});
+				if (this.settings.tooltip.positionFrom == 'limit') {
+					left = offset.left;
 				} else {
-					left = offset.left + distance;
+					left = offset.left + (triggerWidth / 2) - arrowDistance - arrowSize;
 				}
+				this.$tooltipArrow && this.$tooltipArrow.css({left: (arrowDistance + arrowSize + 15) > containerWidth ? (containerWidth/2 - arrowSize) : arrowDistance, right: 'auto'});
 				break;
 			case 'center':
-				if (this.$tooltipArrow && arrowSize) {
-					left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
-					this.$tooltipArrow.css({left: (containerWidth / 2) - arrowSize, right: 'auto'});
-				} else {
-					left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
-				}
+				left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
+				this.$tooltipArrow && this.$tooltipArrow.css({left: (containerWidth / 2) - arrowSize, right: 'auto'});
 				break;
 			case 'right':
-				if (this.$tooltipArrow && arrowSize) {
-					left = offset.left + (triggerWidth / 2) - containerWidth + distance + arrowSize;
-					this.$tooltipArrow.css({left: 'auto', right: distance});
+				if (this.settings.tooltip.positionFrom == 'limit') {
+					left = offset.left + triggerWidth - containerWidth;
 				} else {
-					left = offset.left + triggerWidth - containerWidth - distance;
+					left = offset.left + (triggerWidth / 2) - containerWidth + arrowDistance + arrowSize;
 				}
+				this.$tooltipArrow && this.$tooltipArrow.css({left: 'auto', right: (arrowDistance + arrowSize + 15) > containerWidth ? (containerWidth/2 - arrowSize) : arrowDistance});
 				break;
 			case 'top':
-				if (this.$tooltipArrow && arrowSize) {
-					top = offset.top + (triggerHeight / 2) - distance - arrowSize;
-					this.$tooltipArrow.css({bottom: 'auto', top: distance});
+				if (this.settings.tooltip.positionFrom == 'limit') {
+					top = offset.top;
 				} else {
-					top = offset.top + distance;
+					top = offset.top + (triggerHeight / 2) - arrowDistance - arrowSize;
 				}
+				this.$tooltipArrow && this.$tooltipArrow.css({bottom: 'auto', top: (arrowDistance + arrowSize + 15) > containerHeight ? (containerHeight/2 - arrowSize) : arrowDistance});
 				break;
 			case 'middle':
-				if (this.$tooltipArrow && arrowSize) {
-					top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
-					this.$tooltipArrow.css({bottom: 'auto', top: (containerHeight / 2) - arrowSize});
-				} else {
-					top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
-				}
+				top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
+				this.$tooltipArrow && this.$tooltipArrow.css({bottom: 'auto', top: (containerHeight / 2) - arrowSize});
 				break;
 			case 'bottom':
-				if (this.$tooltipArrow && arrowSize) {
-					top = offset.top + (triggerHeight / 2) - containerHeight + distance + arrowSize;
-					this.$tooltipArrow.css({bottom: distance, top: 'auto'});
+				if (this.settings.tooltip.positionFrom == 'limit') {
+					top = offset.top + triggerHeight - containerHeight;
 				} else {
-					top = offset.top + triggerHeight - containerHeight - distance;
+					top = offset.top + (triggerHeight / 2) - containerHeight + arrowDistance + arrowSize;
 				}
+				this.$tooltipArrow && this.$tooltipArrow.css({bottom: (arrowDistance + arrowSize + 15) > containerHeight ? (containerHeight/2 - arrowSize) : arrowDistance, top: 'auto'});
 				break;
 		}
 
