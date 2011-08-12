@@ -1,14 +1,16 @@
 /**
- * mgExternal 1.0.6
+ * mgExternal 1.0.7
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
-jQuery.fn.mgExternal = function(defaultContent, options) {
+(function($){
+
+$.fn.mgExternal = function(defaultContent, options) {
 	return this.each(function(){
-		jQuery(this).data('mgExternal', mgExternal(this, defaultContent, options));
+		$(this).data('mgExternal', mgExternal(this, defaultContent, options));
 	});
 };
 
@@ -405,6 +407,9 @@ mgExternal.prototype = {
 		if (form.length == 0)
 			form = this.$content.find('form:first');
 
+		if (form.length == 0)
+			form = this.$content;
+
 		var firstInput = form.find('.form-item.alert :not(:radio):input:visible:enabled:first');
 
 		if (firstInput.length == 0)
@@ -514,7 +519,14 @@ mgExternal.prototype = {
 	},
 
 	moveContainer: function() {
-		this.settings.display == 'tooltip' ? this.moveTooltip() : this.moveModal();
+		switch (this.settings.display) {
+			case 'modal':
+				this.moveModal();
+				break;
+			case 'tooltip':
+				this.moveTooltip();
+				break;
+		}
 	},
 
 	moveModal: function() {
@@ -694,3 +706,5 @@ mgExternal.prototype = {
 		this.$container.css({top: top, left: left});
 	}
 };
+
+})(jQuery);
