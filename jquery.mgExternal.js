@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.7
+ * mgExternal 1.0.8
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -52,18 +52,14 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
 		showDelay: 0, // Show delay in ms
 		hideDelay: 0, // Hide delay in ms
+		overlayColor: '#fff', // Default color is set in the CSS file
+		overlayOpacity: (!options || !options.display || options.display == 'modal') ? 0.7 : 0, // Opacity from 0 to 1
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
 		ajaxData: {
 			ajax: 'true', // Might be useful for backend detection. Not required
 			referer: window.location.pathname // Useful for statistics. Not Required
-		},
-
-		// Modal settings
-		modal: {
-			overlayColor: null, // Default color is set in the CSS file
-			overlayOpacity: 0.7 // Opacity from 0 to 1
 		},
 
 		// Tooltip settings
@@ -74,6 +70,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			distance: 0,
 			arrowSize: 9, // Arrow size in pixels
 			arrowDistance: 15,
+			arrowFrontColor: null, // Default front color is set in the CSS file,
 			arrowBorderColor: null, // Default border color is set in the CSS file,
 			fitWindow: true
 		},
@@ -108,8 +105,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	this.$container = null;
 	this.$data = null;
 	this.$content = this.settings.content;
-
-	this.$modalOverlay = null;
 	this.$tooltipArrow = null;
 
 	// Private vars
@@ -118,6 +113,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	this._isContentLoaded = !!this.$content.html();
 	this._lastSubmitName = null;
 	this._show = false;
+	this._triggerZIndexBackup = null;
 
 	// Set trigger bindings
 	if (this.$trigger) {
@@ -202,6 +198,19 @@ mgExternal.prototype = {
 
 				} else {
 
+					self.$trigger.addClass('active');
+
+					if (self.settings.display == 'tooltip') {
+						self._triggerZIndexBackup = {
+							position: self.$trigger.css('position'),
+							zIndex: self.$trigger.css('z-index')
+						};
+						self.$trigger.css({
+							position: self._triggerZIndexBackup.position == 'static' ? 'relative' : null,
+							zIndex: 999
+						});
+					}
+
 					// If the container is not yet created, create it
 					if (!self.$container)
 						self.createElements();
@@ -216,8 +225,17 @@ mgExternal.prototype = {
 								self.focus();
 						});
 					};
-					if (self.$modalOverlay) {
-						self.$modalOverlay.fadeIn(300, fadeInContainer);
+					if (self.settings.overlayOpacity > 0) {
+						$('#mgExternal-overlay').css({
+							background: self.settings.overlayColor,
+							opacity: self.settings.overlayOpacity
+						});
+						if (self.settings.display == 'modal') {
+							$('#mgExternal-overlay').fadeIn(300, fadeInContainer);
+						} else {
+							$('#mgExternal-overlay').fadeIn(300);
+							fadeInContainer();
+						}
 					} else {
 						fadeInContainer();
 					}
@@ -250,6 +268,15 @@ mgExternal.prototype = {
 			// has been created 94 65 65 201
 			if (!self._show && self.$container && self.settings.onBeforeClose.call(self) !== false) {
 
+				self.$trigger.removeClass('active');
+
+				if (self.settings.display == 'tooltip') {
+					self.$trigger.css({
+						position: self._triggerZIndexBackup.position,
+						zIndex: self._triggerZIndexBackup.zIndex
+					});
+				}
+
 				if (self.settings.renew)
 					self._isContentLoaded = false;
 
@@ -261,22 +288,23 @@ mgExternal.prototype = {
 					if (self.settings.destroyOnClose)
 						self.destroy();
 
-					if (self.$modalOverlay) {
-						self.$modalOverlay.fadeOut(300, function(){
+					if (self.settings.overlayOpacity > 0 && self.settings.display == 'modal') {
+						$('#mgExternal-overlay').fadeOut(300, function(){
 							self.settings.onClose.call(self);
 						});
 					} else {
 						self.settings.onClose.call(self);
 					}
 				});
+
+				if (self.settings.overlayOpacity > 0 && self.settings.display != 'modal')
+					$('#mgExternal-overlay').fadeOut(300);
 			}
 		}, delay);
 	},
 
 	// TODO: remove bindings
 	destroy: function() {
-		if (self.$modalOverlay)
-			self.$modalOverlay.remove();
 		self.$container.remove();
 		self.settings.onDestroy.call(self);
 	},
@@ -474,14 +502,12 @@ mgExternal.prototype = {
 			self.settings.onCreate.call(self);
 		}
 
-		if (!this.$modalOverlay && this.settings.display == 'modal') {
+		if (this.settings.overlayOpacity > 0 && $('#mgExternal-overlay').length == 0) {
 			this.$modalOverlay = $('<div/>')
-				.addClass('mgExternal-overlay')
+				.attr('id', 'mgExternal-overlay')
 				.css({
-					background: this.settings.modal.overlayColor,
 					height: '100%',
 					left: 0,
-					opacity: this.settings.modal.overlayOpacity,
 					position: 'fixed',
 					top: 0,
 					width: '100%',
@@ -509,7 +535,7 @@ mgExternal.prototype = {
 				.append($('<div/>')
 					.addClass('mgExternal-arrow-front')
 					.css({
-						borderColor: this.$data.css('backgroundColor'),
+						borderColor: this.settings.tooltip.arrowFrontColor || this.$data.css('backgroundColor'),
 						borderStyle: 'solid',
 						position: 'absolute',
 						borderWidth: this.settings.tooltip.arrowSize
