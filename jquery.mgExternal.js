@@ -253,7 +253,7 @@ mgExternal.prototype = {
 	hide: function(delay) {
 
 		// Inline content cannot be shown/hidden, it's always visible
-		if (this.settings.display == 'inline')
+		if (this.settings.display == 'inline' || !this.$container || !this.$container.is(':visible'))
 			return;
 
 		var self = this;
