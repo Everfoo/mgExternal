@@ -253,7 +253,7 @@ mgExternal.prototype = {
 	hide: function(delay) {
 
 		// Inline content cannot be shown/hidden, it's always visible
-		if (this.settings.display == 'inline' || !this.$container || !this.$container.is(':visible'))
+		if (this.settings.display == 'inline')
 			return;
 
 		var self = this;
@@ -261,11 +261,15 @@ mgExternal.prototype = {
 		// Set show status to not visible
 		this._show = false;
 
+		// Ignore hiding if the container is already hidden
+		if (!this.$container || !this.$container.is(':visible'))
+			return;
+
 		// Execute the real hiding actions...
 		setTimeout(function(){
 
 			// ...only if show status is set to not visible and the container
-			// has been created 94 65 65 201
+			// has been created
 			if (!self._show && self.$container && self.settings.onBeforeClose.call(self) !== false) {
 
 				self.$trigger.removeClass('active');
