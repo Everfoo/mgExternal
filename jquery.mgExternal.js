@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.8
+ * mgExternal 1.0.9
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -253,7 +253,7 @@ mgExternal.prototype = {
 	hide: function(delay) {
 
 		// Inline content cannot be shown/hidden, it's always visible
-		if (this.settings.display == 'inline')
+		if (this.settings.display == 'inline' || !this.$container || !this.$container.is(':visible'))
 			return;
 
 		var self = this;
@@ -545,6 +545,10 @@ mgExternal.prototype = {
 	},
 
 	moveContainer: function() {
+
+		if (!this.$container || !this.$container.is(':visible'))
+			return;
+
 		switch (this.settings.display) {
 			case 'modal':
 				this.moveModal();
