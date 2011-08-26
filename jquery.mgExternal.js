@@ -438,7 +438,7 @@ mgExternal.prototype = {
 		if (form.length == 0)
 			form = this.$content;
 
-		for (var firstInput = form.find(this.settings.focusPriority[var i = 0]);
+		for (var i = 0, firstInput = form.find(this.settings.focusPriority[i]);
 		     firstInput.length == 0 && i <= this.settings.focusPriority.length;
 		     firstInput = form.find(this.settings.focusPriority[++i]));
 
