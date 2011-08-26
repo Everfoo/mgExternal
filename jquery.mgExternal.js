@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.8
+ * mgExternal 1.0.9
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -52,15 +52,17 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
 		showDelay: 0, // Show delay in ms
 		hideDelay: 0, // Hide delay in ms
+		showSpeed: 300,
+		hideSpeed: 300,
 		overlayColor: '#fff', // Default color is set in the CSS file
 		overlayOpacity: (!options || !options.display || options.display == 'modal') ? 0.7 : 0, // Opacity from 0 to 1
+		focusPriority: [
+			':not(:radio):input:visible:enabled:first'
+		],
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
-		ajaxData: {
-			ajax: 'true', // Might be useful for backend detection. Not required
-			referer: window.location.pathname // Useful for statistics. Not Required
-		},
+		ajaxData: {},
 
 		// Tooltip settings
 		tooltip: {
@@ -72,7 +74,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			arrowDistance: 15,
 			arrowFrontColor: null, // Default front color is set in the CSS file,
 			arrowBorderColor: null, // Default border color is set in the CSS file,
-			fitWindow: true
+			fitWindow: true,
+			activeClass: 'active'
 		},
 
 		// Callbacks
@@ -82,23 +85,13 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		onBeforeClose: function(){}, // returning false prevents closing
 		onClose: function(){},
 		onDestroy: function(){},
-		onContentReady: function(){
-			// Sample action
-			this.$content.setPlugins();
-		},
-		onJsonData: function(data){
-			// Sample actions
-			if (data.reload) {
-				window.location.reload();
-			} else if (data.redirect) {
-				window.location.replace(base_url+data.redirect);
-			}
-		}
+		onContentReady: function(){},
+		onJsonData: function(data){}
 	};
 
 	// data-mg-external HTML attributes are a valid alternate method of
 	// passing options
-	$.extend(true, this.settings, options, $(trigger).data('mgExternal'));
+	$.extend(true, this.settings, this.defaults, options, $(trigger).data('mgExternal'));
 
 	// Internal jQuery elements
 	this.$trigger = $(trigger);
@@ -172,6 +165,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 mgExternal.prototype = {
 
+	defaults: {},
+
 	show: function(delay) {
 
 		// Inline content cannot be shown/hidden, it's always visible
@@ -198,7 +193,7 @@ mgExternal.prototype = {
 
 				} else {
 
-					self.$trigger.addClass('active');
+					self.$trigger.addClass(self.settings.tooltip.activeClass);
 
 					if (self.settings.display == 'tooltip') {
 						self._triggerZIndexBackup = {
@@ -218,7 +213,7 @@ mgExternal.prototype = {
 					// Fade container in, and call onShow. If it's a modal, fade
 					// overlay in before
 					var fadeInContainer = function(){
-						self.$container.fadeIn(300, function(){
+						self.$container.fadeIn(self.settings.showSpeed, function(){
 							self.settings.onShow.call(self);
 
 							if (self.settings.autoFocus)
@@ -231,9 +226,9 @@ mgExternal.prototype = {
 							opacity: self.settings.overlayOpacity
 						});
 						if (self.settings.display == 'modal') {
-							$('#mgExternal-overlay').fadeIn(300, fadeInContainer);
+							$('#mgExternal-overlay').fadeIn(self.settings.showSpeed, fadeInContainer);
 						} else {
-							$('#mgExternal-overlay').fadeIn(300);
+							$('#mgExternal-overlay').fadeIn(self.settings.showSpeed);
 							fadeInContainer();
 						}
 					} else {
@@ -272,7 +267,7 @@ mgExternal.prototype = {
 			// has been created
 			if (!self._show && self.$container && self.settings.onBeforeClose.call(self) !== false) {
 
-				self.$trigger.removeClass('active');
+				self.$trigger.removeClass(self.settings.tooltip.activeClass);
 
 				if (self.settings.display == 'tooltip') {
 					self.$trigger.css({
@@ -285,7 +280,7 @@ mgExternal.prototype = {
 					self._isContentLoaded = false;
 
 				// Fade container out
-				self.$container.fadeOut(300, function(){
+				self.$container.fadeOut(self.settings.hideSpeed, function(){
 
 					// If set to be destroyed, remove the content and bindings,
 					// and call onDestroy
@@ -293,7 +288,7 @@ mgExternal.prototype = {
 						self.destroy();
 
 					if (self.settings.overlayOpacity > 0 && self.settings.display == 'modal') {
-						$('#mgExternal-overlay').fadeOut(300, function(){
+						$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed, function(){
 							self.settings.onClose.call(self);
 						});
 					} else {
@@ -302,7 +297,7 @@ mgExternal.prototype = {
 				});
 
 				if (self.settings.overlayOpacity > 0 && self.settings.display != 'modal')
-					$('#mgExternal-overlay').fadeOut(300);
+					$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed);
 			}
 		}, delay);
 	},
@@ -442,10 +437,7 @@ mgExternal.prototype = {
 		if (form.length == 0)
 			form = this.$content;
 
-		var firstInput = form.find('.form-item.alert :not(:radio):input:visible:enabled:first');
-
-		if (firstInput.length == 0)
-			firstInput = form.find(':not(:radio):input:visible:enabled:first');
+		for (var i = 0, firstInput = form.find(this.settings.focusPriority[i]); firstInput.length == 0 && i <= this.settings.focusPriority.length; i++);
 
 		setTimeout(function(){
 			firstInput.trigger('focus');
