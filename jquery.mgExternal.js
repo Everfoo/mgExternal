@@ -305,8 +305,8 @@ mgExternal.prototype = {
 
 	// TODO: remove bindings
 	destroy: function() {
-		self.$container.remove();
-		self.settings.onDestroy.call(self);
+		this.$container.remove();
+		this.settings.onDestroy.call(this);
 	},
 
 	bindSpecialActions: function() {
