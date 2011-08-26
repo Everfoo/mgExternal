@@ -440,7 +440,7 @@ mgExternal.prototype = {
 
 		for (var firstInput = form.find(this.settings.focusPriority[var i = 0]);
 		     firstInput.length == 0 && i <= this.settings.focusPriority.length;
-		     firstInput = form.find(this.settings.focusPriority[++i]);
+		     firstInput = form.find(this.settings.focusPriority[++i]));
 
 		setTimeout(function(){
 			firstInput.trigger('focus');
