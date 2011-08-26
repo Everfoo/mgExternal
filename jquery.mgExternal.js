@@ -69,6 +69,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			bind: 'click', // click, hover or focus
 			position: 'top center', // top/bottom left/center/right, or left/right top/middle/bottom
 			positionFrom: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 'limit' : 'center', // center or limit
+			positionSource: $(trigger),
 			distance: 0,
 			arrowSize: 9, // Arrow size in pixels
 			arrowDistance: 15,
@@ -574,9 +575,9 @@ mgExternal.prototype = {
 		    left = 0,
 		    containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true),
-		    offset = this.$trigger.offset(),
-		    triggerHeight = this.$trigger.outerHeight(),
-		    triggerWidth = this.$trigger.outerWidth(),
+		    offset = this.settings.positionSource.offset(),
+		    triggerHeight = this.settings.positionSource.outerHeight(),
+		    triggerWidth = this.settings.positionSource.outerWidth(),
 		    distance = this.settings.tooltip.distance,
 		    arrowSize = this.settings.tooltip.arrowSize,
 		    arrowDistance = this.settings.tooltip.arrowDistance;
