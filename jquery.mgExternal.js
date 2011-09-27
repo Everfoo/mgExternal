@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.9
+ * mgExternal 1.0.10
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -50,11 +50,11 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		// Appearance
 		dataCss: {}, // Custom data CSS
 		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
-		showDelay: 0, // Show delay in ms
-		hideDelay: 0, // Hide delay in ms
+		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover' && !defaultContent) ? 200 : 0, // Show delay in ms
+		hideDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Hide delay in ms
 		showSpeed: 300,
 		hideSpeed: 300,
-		overlayColor: '#fff', // Default color is set in the CSS file
+		overlayColor: '#fff',
 		overlayOpacity: (!options || !options.display || options.display == 'modal') ? 0.7 : 0, // Opacity from 0 to 1
 		focusPriority: [
 			':not(:radio):input:visible:enabled:first'
@@ -203,7 +203,7 @@ mgExternal.prototype = {
 						};
 						self.$trigger.css({
 							position: self._triggerZIndexBackup.position == 'static' ? 'relative' : null,
-							zIndex: 999
+							zIndex: 998
 						});
 					}
 
@@ -383,7 +383,7 @@ mgExternal.prototype = {
 					}
 				});
 			}
-			this.$content.find(':input').prop('disabled', true);
+			this.$content.find(':input').prop('disabled', true).addClass('disabled');
 		} else {
 			this.show();
 			this.bindSpecialActions();
@@ -393,6 +393,8 @@ mgExternal.prototype = {
 	// Sets the given content, opens and updates the container position, and
 	// binds special actions
 	setContent: function(data) {
+
+		var self = this;
 
 		this._isContentLoaded = true;
 
@@ -425,15 +427,19 @@ mgExternal.prototype = {
 		// TODO: revisit this feature
 		// $(document).trigger('mgExternal-ready').unbind('mgExternal-ready');
 
-		this.settings.onContentReady.call(this);
+		// Set inside a timeout to give time for elements to appear
+		// (gave errors with CSS not giving correct values)
+		setTimeout(function(){
+			self.settings.onContentReady.call(self);
+		}, 10);
 	},
 
 	focus: function() {
 
-		var form = this.$content.find('input[type="submit"][name="'+this._lastSubmitName+'"]').parents('form');
+		var form = this.$content.find('input[type="submit"][name="'+this._lastSubmitName+'"]').parents('form:visible');
 
 		if (form.length == 0)
-			form = this.$content.find('form:first');
+			form = this.$content.find('form:first:visible');
 
 		if (form.length == 0)
 			form = this.$content;
@@ -442,9 +448,10 @@ mgExternal.prototype = {
 		     firstInput.length == 0 && i <= this.settings.focusPriority.length;
 		     firstInput = form.find(this.settings.focusPriority[++i]));
 
+		// Set timeout to 20ms, just after onContentReady
 		setTimeout(function(){
 			firstInput.trigger('focus');
-		}, 10);
+		}, 20);
 	},
 
 	createElements: function() {
@@ -510,7 +517,7 @@ mgExternal.prototype = {
 					position: 'fixed',
 					top: 0,
 					width: '100%',
-					zIndex: 998
+					zIndex: 997
 				})
 				.hide()
 				.appendTo('body');
@@ -649,7 +656,13 @@ mgExternal.prototype = {
 				} else {
 					left = offset.left + (triggerWidth / 2) - arrowDistance - arrowSize;
 				}
-				this.$tooltipArrow && this.$tooltipArrow.css({left: (arrowDistance + arrowSize + 15) > containerWidth ? (containerWidth/2 - arrowSize) : arrowDistance, right: 'auto'});
+				if (this.$tooltipArrow) {
+					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
+						this.$tooltipArrow.css({left: (triggerWidth / 2) - arrowSize, right: 'auto'});
+					} else {
+						this.$tooltipArrow.css({left: arrowDistance, right: 'auto'});
+					}
+				}
 				break;
 			case 'center':
 				left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
@@ -661,7 +674,13 @@ mgExternal.prototype = {
 				} else {
 					left = offset.left + (triggerWidth / 2) - containerWidth + arrowDistance + arrowSize;
 				}
-				this.$tooltipArrow && this.$tooltipArrow.css({left: 'auto', right: (arrowDistance + arrowSize + 15) > containerWidth ? (containerWidth/2 - arrowSize) : arrowDistance});
+				if (this.$tooltipArrow) {
+					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
+						this.$tooltipArrow.css({left: 'auto', right: (triggerWidth / 2) - arrowSize});
+					} else {
+						this.$tooltipArrow.css({left: 'auto', right: arrowDistance});
+					}
+				}
 				break;
 			case 'top':
 				if (this.settings.tooltip.positionFrom == 'limit') {
@@ -669,7 +688,13 @@ mgExternal.prototype = {
 				} else {
 					top = offset.top + (triggerHeight / 2) - arrowDistance - arrowSize;
 				}
-				this.$tooltipArrow && this.$tooltipArrow.css({bottom: 'auto', top: (arrowDistance + arrowSize + 15) > containerHeight ? (containerHeight/2 - arrowSize) : arrowDistance});
+				if (this.$tooltipArrow) {
+					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
+						this.$tooltipArrow.css({bottom: 'auto', top: (triggerHeight / 2) - arrowSize});
+					} else {
+						this.$tooltipArrow.css({bottom: 'auto', top: arrowDistance});
+					}
+				}
 				break;
 			case 'middle':
 				top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
@@ -681,7 +706,13 @@ mgExternal.prototype = {
 				} else {
 					top = offset.top + (triggerHeight / 2) - containerHeight + arrowDistance + arrowSize;
 				}
-				this.$tooltipArrow && this.$tooltipArrow.css({bottom: (arrowDistance + arrowSize + 15) > containerHeight ? (containerHeight/2 - arrowSize) : arrowDistance, top: 'auto'});
+				if (this.$tooltipArrow) {
+					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
+						this.$tooltipArrow.css({bottom: (triggerHeight / 2) - arrowSize, top: 'auto'});
+					} else {
+						this.$tooltipArrow.css({bottom: arrowDistance, top: 'auto'});
+					}
+				}
 				break;
 		}
 
