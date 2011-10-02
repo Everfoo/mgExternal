@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.10
+ * mgExternal 1.0.11
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -16,7 +16,6 @@ $.fn.mgExternal = function(defaultContent, options) {
 
 window.mgExternal = function(trigger, defaultContent, options) {
 
-	// Don't require `new`
 	if (!(this instanceof mgExternal))
 		return new mgExternal(trigger, defaultContent, options);
 
@@ -39,7 +38,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 		// Core
 		display: 'modal', // modal, tooltip or inline
-		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>').html(defaultContent || ""),
+		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>'),
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
@@ -50,12 +49,13 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		// Appearance
 		dataCss: {}, // Custom data CSS
 		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
-		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover' && !defaultContent) ? 200 : 0, // Show delay in ms
+		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Show delay in ms
 		hideDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Hide delay in ms
 		showSpeed: 300,
 		hideSpeed: 300,
 		overlayColor: '#fff',
 		overlayOpacity: (!options || !options.display || options.display == 'modal') ? 0.7 : 0, // Opacity from 0 to 1
+		submitIdentifier: 'input[type="submit"]',
 		focusPriority: [
 			':not(:radio):input:visible:enabled:first'
 		],
@@ -80,7 +80,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		},
 
 		// Callbacks
-		onCreate: function(){},
+		onCreateElements: function(){},
 		onBeforeShow: function(){}, // returning false prevents opening
 		onShow: function(){},
 		onBeforeClose: function(){}, // returning false prevents closing
@@ -104,10 +104,10 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	// Private vars
 	this._defaultContent = defaultContent;
 	this._defaultAjaxUrl = this.settings.ajaxUrl;
-	this._isContentLoaded = !!this.$content.html();
 	this._lastSubmitName = null;
 	this._show = false;
 	this._triggerZIndexBackup = null;
+	this._triggeredStart = false;
 
 	// Set trigger bindings
 	if (this.$trigger) {
@@ -117,7 +117,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 			case 'modal':
 				this.$trigger.bind('click', function(e){
-					self.show(self.settings.showDelay);
+					self.open(self.settings.showDelay);
 					e.preventDefault();
 					e.stopPropagation();
 				});
@@ -127,26 +127,22 @@ window.mgExternal = function(trigger, defaultContent, options) {
 				switch (this.settings.tooltip.bind) {
 					case 'click':
 						this.$trigger.bind('click', function(e){
-							if (self.$container && self.$container.is(':visible')) {
-								self.hide(self.settings.hideDelay);
-							} else {
-								self.show(self.settings.showDelay);
-							}
+							self.isVisible() ? self.close() : self.open(self.settings.showDelay);
 							e.preventDefault();
 							e.stopPropagation();
 						});
 						break;
 					case 'hover':
 						this.$trigger.bind({
-							mouseenter: function(){self.show(self.settings.showDelay)},
-							mouseleave: function(){self.hide(self.settings.hideDelay)},
+							mouseenter: function(){self.open(self.settings.showDelay)},
+							mouseleave: function(){self.close(self.settings.hideDelay)},
 							mouseup: function(e){e.stopPropagation()}
 						});
 						break;
 					case 'focus':
 						this.$trigger.bind({
-							focus: function(){self.show(self.settings.showDelay)},
-							blur: function(){self.hide(self.settings.hideDelay)},
+							focus: function(){self.open(self.settings.showDelay)},
+							blur: function(){self.close(self.settings.hideDelay)},
 							mouseup: function(e){e.stopPropagation()}
 						});
 						break;
@@ -161,146 +157,179 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 	// Auto-open if set
 	if (this.settings.auto)
-		this.show();
+		this.open();
 };
 
 mgExternal.prototype = {
 
 	defaults: {},
 
-	show: function(delay) {
-
-		// Inline content cannot be shown/hidden, it's always visible
-		if (this.settings.display == 'inline')
-			return;
-
-		var self = this;
-
-		// Set show status to visible
-		this._show = true;
-
-		// Execute the real showing actions...
-		setTimeout(function(){
-
-			// ...only if show status is set to visible
-			if (self._show && self.settings.onBeforeShow.call(self) !== false) {
-
-				if (!self._isContentLoaded) {
-
-					self.settings.ajaxUrl = self._defaultAjaxUrl;
-					self._lastSubmitName = null;
-					self.loadContent(false, !self.$content.html() || !self._defaultContent);
-					self._isContentLoaded = true;
-
-				} else {
-
-					self.$trigger.addClass(self.settings.tooltip.activeClass);
-
-					if (self.settings.display == 'tooltip') {
-						self._triggerZIndexBackup = {
-							position: self.$trigger.css('position'),
-							zIndex: self.$trigger.css('z-index')
-						};
-						self.$trigger.css({
-							position: self._triggerZIndexBackup.position == 'static' ? 'relative' : null,
-							zIndex: 998
-						});
-					}
-
-					// If the container is not yet created, create it
-					if (!self.$container)
-						self.createElements();
-
-					// Fade container in, and call onShow. If it's a modal, fade
-					// overlay in before
-					var fadeInContainer = function(){
-						self.$container.fadeIn(self.settings.showSpeed, function(){
-							self.settings.onShow.call(self);
-
-							if (self.settings.autoFocus)
-								self.focus();
-						});
-					};
-					if (self.settings.overlayOpacity > 0) {
-						$('#mgExternal-overlay').css({
-							background: self.settings.overlayColor,
-							opacity: self.settings.overlayOpacity
-						});
-						if (self.settings.display == 'modal') {
-							$('#mgExternal-overlay').fadeIn(self.settings.showSpeed, fadeInContainer);
-						} else {
-							$('#mgExternal-overlay').fadeIn(self.settings.showSpeed);
-							fadeInContainer();
-						}
-					} else {
-						fadeInContainer();
-					}
-
-					// Reposition the container
-					self.moveContainer();
-					self.$container.find('img').load(function(){
-						self.moveContainer();
-					});
-				}
-			}
-		}, delay);
+	isVisible: function() {
+		return this.$container && this.$container.is(':visible') && this.$container.css('visibility') != 'hidden';
 	},
 
-	hide: function(delay) {
+	open: function(delay) {
+		var self = this;
+		this._show = true;
+		setTimeout(function(){self.realOpen()}, delay || 10);
+	},
 
-		// Inline content cannot be shown/hidden, it's always visible
-		if (this.settings.display == 'inline')
+	realOpen: function() {
+
+		if (!this._show)
+			return;
+
+		if (!this.triggeredStart) {
+			this.triggeredStart = true;
+			this.settings.onStart.call(this);
+		}
+
+		// New content
+		if (this.settings.renew || !this.$container) {
+			this.settings.ajaxUrl = this._defaultAjaxUrl;
+			this._lastSubmitName = null;
+			if (this._defaultContent) {
+				this.setContent(this._defaultContent);
+			} else {
+				this.loadAjaxContent();
+			}
+		}
+		// Show existing content
+		else {
+			this.showContainer();
+		}
+	},
+
+	close: function(delay) {
+		var self = this;
+		this._show = false;
+		setTimeout(function(){self.realClose()}, delay || 10);
+	},
+
+	realClose: function() {
+
+		if (this._show || !this.isVisible() || this.settings.onBeforeClose.call(this) === false)
 			return;
 
 		var self = this;
 
-		// Set show status to not visible
-		this._show = false;
+		if (this.settings.display == 'tooltip') {
+			this.$trigger.removeClass(this.settings.tooltip.activeClass).css({
+				position: this._triggerZIndexBackup.position,
+				zIndex: this._triggerZIndexBackup.zIndex
+			});
+		}
 
-		// Ignore hiding if the container is already hidden
-		if (!this.$container || !this.$container.is(':visible'))
+		// Fade container out
+		this.$container.fadeOut(this.settings.hideSpeed, function(){
+
+			// If set to be destroyed, remove the content and bindings,
+			// and call onDestroy
+			if (self.settings.destroyOnClose)
+				self.destroy();
+
+			if (self.settings.overlayOpacity > 0 && self.settings.display == 'modal') {
+				$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed, function(){
+					self.settings.onClose.call(self);
+				});
+			} else {
+				self.settings.onClose.call(self);
+			}
+		});
+
+		if (this.settings.overlayOpacity > 0 && this.settings.display != 'modal')
+			$('#mgExternal-overlay').fadeOut(this.settings.hideSpeed);
+
+	},
+
+	setContent: function(html) {
+
+		var self = this;
+
+		if (!this.$container)
+			this.createElements();
+
+		// We remove the margin for the first DIV element due to aesthetical
+		// reasons. If you wish to maintain those proportions, you should set
+		// the equivalent padding in settings.dataCss
+		this.$content
+			.html(html)
+			.children()
+				.css({
+					marginLeft: 0,
+					marginRight: 0
+				})
+				.first()
+					.css('margin-top', '0')
+					.end()
+				.last()
+					.css('margin-bottom', '0');
+
+		if (!this.isVisible())
+			this.$container.css('visibility', 'hidden').show();
+
+		// setTimeout(function(){
+		this.bindSpecialActions();
+		this.settings.onContentReady.call(this);
+		this.setFocus();
+		// }, 10);
+
+		if (this.settings.display != 'inline') {
+			if (this.isVisible()) {
+				this.moveContainer();
+			} else {
+				this.$container.hide().css('visibility', 'visible');
+				this.showContainer();
+			}
+		}
+	},
+
+	showContainer: function() {
+
+		if (this.settings.onBeforeShow.call(this) === false)
 			return;
 
-		// Execute the real hiding actions...
-		setTimeout(function(){
+		var self = this;
 
-			// ...only if show status is set to not visible and the container
-			// has been created
-			if (!self._show && self.$container && self.settings.onBeforeClose.call(self) !== false) {
+		if (this.settings.display == 'tooltip') {
+			this._triggerZIndexBackup = {
+				position: this.$trigger.css('position'),
+				zIndex: this.$trigger.css('z-index')
+			};
+			this.$trigger.addClass(this.settings.tooltip.activeClass).css({
+				position: this._triggerZIndexBackup.position == 'static' ? 'relative' : null,
+				zIndex: 998
+			});
+		}
 
-				self.$trigger.removeClass(self.settings.tooltip.activeClass);
-
-				if (self.settings.display == 'tooltip') {
-					self.$trigger.css({
-						position: self._triggerZIndexBackup.position,
-						zIndex: self._triggerZIndexBackup.zIndex
-					});
-				}
-
-				if (self.settings.renew)
-					self._isContentLoaded = false;
-
-				// Fade container out
-				self.$container.fadeOut(self.settings.hideSpeed, function(){
-
-					// If set to be destroyed, remove the content and bindings,
-					// and call onDestroy
-					if (self.settings.destroyOnClose)
-						self.destroy();
-
-					if (self.settings.overlayOpacity > 0 && self.settings.display == 'modal') {
-						$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed, function(){
-							self.settings.onClose.call(self);
-						});
-					} else {
-						self.settings.onClose.call(self);
-					}
-				});
-
-				if (self.settings.overlayOpacity > 0 && self.settings.display != 'modal')
-					$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed);
+		// Fade container in, and call onShow. If it's a modal, fade
+		// overlay in before
+		var fadeInContainer = function(){
+			self.$container.fadeIn(self.settings.showSpeed, function(){
+				self.settings.onShow.call(self);
+				self.setFocus();
+			});
+		};
+		if (this.settings.overlayOpacity > 0) {
+			$('#mgExternal-overlay').css({
+				background: this.settings.overlayColor,
+				opacity: this.settings.overlayOpacity
+			});
+			if (this.settings.display == 'modal') {
+				$('#mgExternal-overlay').fadeIn(this.settings.showSpeed, fadeInContainer);
+			} else {
+				$('#mgExternal-overlay').fadeIn(this.settings.showSpeed);
+				fadeInContainer();
 			}
-		}, delay);
+		} else {
+			fadeInContainer();
+		}
+
+		// Reposition the container
+		this.moveContainer();
+		this.$container.find('img').bind('load', function(){
+			self.moveContainer();
+		});
 	},
 
 	// TODO: remove bindings
@@ -312,32 +341,27 @@ mgExternal.prototype = {
 	bindSpecialActions: function() {
 		var self = this;
 		this.$content.find('form').bind('submit', function(e){
-			self.loadContent($(this));
-			e.preventDefault();
-		});
-		this.$content.find('.mgExternal-reload').bind('click', function(e){
-			self.loadContent(true);
+			self.loadAjaxContent($(this));
 			e.preventDefault();
 		});
 		this.$content.find('.mgExternal-redirect').bind('click', function(e){
 			self.settings.ajaxUrl = $(this).attr('href');
-			self.loadContent(false, true);
+			self.loadAjaxContent();
 			e.preventDefault();
 		});
 		this.$content.find('.mgExternal-close').bind('click', function(e){
-			self.hide();
+			self.close();
 			e.preventDefault();
 		});
 	},
 
-	loadContent: function(submit, forceAjax) {
+	loadAjaxContent: function(submit) {
 		var self = this,
-		    form = (typeof submit == 'object') ? submit : this.$content.find('form'),
-		ajaxData = $.extend({}, self.settings.ajaxData);
+			ajaxData = $.extend({}, self.settings.ajaxData);
 
 		if (submit) {
-			this._lastSubmitName = form.find('input[type="submit"]').attr('name');
-			form.find(':input').each(function(){
+			this._lastSubmitName = submit.find(this.settings.submitIdentifier).val();
+			submit.find(':input').each(function(){
 				if ($(this).is(':checkbox')) {
 					ajaxData[$(this).attr('name')] = $(this).prop('checked') ? 1 : 0;
 				} else if ($(this).is(':radio')) {
@@ -349,94 +373,50 @@ mgExternal.prototype = {
 			});
 		}
 
-		if (submit || forceAjax /*|| (!submit && this.defaultContent && this.settings.ajaxUrl) || (!this.defaultContent && this.settings.display != 'inline')*/) {
-			if (submit && form.attr('enctype') == 'multipart/form-data') {
-				var iframeName = 'mgExternal-iframe'+Math.floor(Math.random()*99999);
-				$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="javascript:false;" style="display:none;"></iframe>')
-					.appendTo('body')
-					//.append(form.parent().html())
-					.bind('load', function(){
-						var contents = $(this).contents().find('body').contents();
-						if (contents.text() != 'false')
-							self.setContent($(this).contents().find('body').contents());
-					});
-				form.attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
-					.attr('target', iframeName)
-					.append('<input type="hidden" name="ajax" value="true" />')
-					.append('<input type="hidden" name="'+form.find(':submit').attr('name')+'" value="'+form.find(':submit').val()+'" />')
-					.unbind('submit')
-					.trigger('submit');
-			} else {
-				$.ajax({
-					url: this.settings.ajaxUrl || this.$trigger.attr('href'),
-					type: submit ? 'POST' : 'GET',
-					data: ajaxData,
-					success: function(data){
-						if (typeof data == 'object') {
-							self.settings.onJsonData.call(self, data);
-						} else {
-							self.setContent(data);
-						}
-					},
-					error: function(jqXHR, textStatus, errorThrown){
-						self.setContent('<div class="notice alert" style="white-space:nowrap;">S\'ha produït un error - <a class="mgExternal-reload">Reintentar</a></div>');
-					}
+		if (submit && submit.attr('enctype') == 'multipart/form-data') {
+			alert("multipart form");
+			/*var iframeName = 'mgExternal-iframe'+Math.floor(Math.random()*99999);
+			$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="javascript:false;" style="display:none;"></iframe>')
+				.appendTo('body')
+				//.append(form.parent().html())
+				.bind('load', function(){
+					var contents = $(this).contents().find('body').contents();
+					if (contents.text() != 'false')
+						self.setContent($(this).contents().find('body').contents());
 				});
-			}
-			this.$content.find(':input').prop('disabled', true).addClass('disabled');
+			form.attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
+				.attr('target', iframeName)
+				.append('<input type="hidden" name="ajax" value="true" />')
+				.append('<input type="hidden" name="'+form.find(':submit').attr('name')+'" value="'+form.find(':submit').val()+'" />')
+				.unbind('submit')
+				.trigger('submit');*/
 		} else {
-			this.show();
-			this.bindSpecialActions();
+			$.ajax({
+				url: this.settings.ajaxUrl || this.$trigger.attr('href'),
+				type: submit ? 'POST' : 'GET',
+				data: ajaxData,
+				success: function(data){
+					if (typeof data == 'object') {
+						self.settings.onJsonData.call(self, data);
+					} else {
+						self.setContent(data);
+					}
+				},
+				error: function(jqXHR, textStatus, errorThrown){
+					self.setContent("<div class=\"notice alert\">S'ha produït un error</div>");
+				}
+			});
 		}
+
+		this.$content.find(':input').prop('disabled', true).addClass('disabled');
 	},
 
-	// Sets the given content, opens and updates the container position, and
-	// binds special actions
-	setContent: function(data) {
+	setFocus: function() {
 
-		var self = this;
+		if (!this.settings.autoFocus)
+			return;
 
-		this._isContentLoaded = true;
-
-		// We remove the margin for the first DIV element due to aesthetical
-		// reasons. If you wish to maintain those proportions, you should set
-		// the equivalent padding in settings.dataCss
-		this.$content
-			.html(data)
-			.find('> div')
-				.css('margin', '0');
-		
-		// We could call show() directly and not duplicate the code below,
-		// but as show() uses a setTimeout and therefore has a minimum delay of
-		// 1-10ms by design, an update in the content would have an unpleasant
-		// glitch in its positioning. Instead, we use moveContainer()
-		if (this.$container && this.$container.is(':visible')) {
-			if (this.settings.autoFocus)
-				this.focus();
-
-			this.moveContainer();
-		} else if (this.settings.display == 'inline') {
-			if (this.settings.autoFocus)
-				this.focus();
-		} else {
-			this.show();
-		}
-	
-		this.bindSpecialActions();
-
-		// TODO: revisit this feature
-		// $(document).trigger('mgExternal-ready').unbind('mgExternal-ready');
-
-		// Set inside a timeout to give time for elements to appear
-		// (gave errors with CSS not giving correct values)
-		setTimeout(function(){
-			self.settings.onContentReady.call(self);
-		}, 10);
-	},
-
-	focus: function() {
-
-		var form = this.$content.find('input[type="submit"][name="'+this._lastSubmitName+'"]').parents('form:visible');
+		var form = this.$content.find(this.settings.submitIdentifier+'[value="'+this._lastSubmitName+'"]').parents('form:visible');
 
 		if (form.length == 0)
 			form = this.$content.find('form:first:visible');
@@ -448,10 +428,9 @@ mgExternal.prototype = {
 		     firstInput.length == 0 && i <= this.settings.focusPriority.length;
 		     firstInput = form.find(this.settings.focusPriority[++i]));
 
-		// Set timeout to 20ms, just after onContentReady
 		setTimeout(function(){
 			firstInput.trigger('focus');
-		}, 20);
+		}, 10);
 	},
 
 	createElements: function() {
@@ -480,43 +459,47 @@ mgExternal.prototype = {
 				.append(this.$content);
 
 			if (this.settings.tooltip.bind == 'hover') {
-				this.$container.bind('mouseenter', $.proxy(function(){this.show(this.settings.showDelay)}, this));
-				this.$container.bind('mouseleave', $.proxy(function(){this.hide(this.settings.hideDelay)}, this));
+				this.$container.bind('mouseenter', function(){self.open(self.settings.showDelay)});
+				this.$container.bind('mouseleave', function(){self.close(self.settings.hideDelay)});
 			}
 
-			$(window).bind('resize', function(){self.moveContainer()});
+			if (this.settings.display != 'inline') {
 
-			// Hide on outside click or ESC
-			if (this.settings.outsideClose) {
+				// Resize re-position
+				$(window).bind('resize', function(){self.moveContainer()});
 
-				// Actually using mouseup event due to IE incompatibility.
-				// Also using body instead of document as clicking on the scroll bar
-				// triggers the event on the latter, closing the container.
-				$('body').bind('mouseup', function(e){
-					if (e.which == 1)
-						self.hide();
-				});
+				// Hide on outside click or ESC
+				if (this.settings.outsideClose) {
+
+					// Actually using mouseup event due to IE incompatibility.
+					// Also using body instead of document as clicking on the scroll bar
+					// triggers the event on the latter, closing the container.
+					$('body').bind('mouseup', function(e){
+						if (e.which == 1)
+							self.close();
+					});
+				}
+
+				if (this.settings.escClose) {
+					$(document).bind('keyup', function(e){
+						if (e.keyCode == 27)
+							self.close();
+					});
+				}
 			}
 
-			if (this.settings.escClose) {
-				$(document).bind('keyup', function(e){
-					if (e.keyCode == 27)
-						self.hide();
-				});
-			}
-
-			self.settings.onCreate.call(self);
+			self.settings.onCreateElements.call(self);
 		}
 
 		if (this.settings.overlayOpacity > 0 && $('#mgExternal-overlay').length == 0) {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
-					height: '100%',
+					height: $('body').height(), // 100% doesn't work properly on touchscreens
 					left: 0,
 					position: 'fixed',
 					top: 0,
-					width: '100%',
+					width: $('body').width(), // 100% doesn't work properly on touchscreens
 					zIndex: 997
 				})
 				.hide()
@@ -584,9 +567,9 @@ mgExternal.prototype = {
 		    left = 0,
 		    containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true),
-		    offset = this.settings.tooltip.positionSource.offset(),
-		    triggerHeight = this.settings.tooltip.positionSource.outerHeight(),
-		    triggerWidth = this.settings.tooltip.positionSource.outerWidth(),
+		    sourceOffset = this.settings.tooltip.positionSource.offset(),
+		    sourceHeight = this.settings.tooltip.positionSource.outerHeight(),
+		    sourceWidth = this.settings.tooltip.positionSource.outerWidth(),
 		    distance = this.settings.tooltip.distance,
 		    arrowSize = this.settings.tooltip.arrowSize,
 		    arrowDistance = this.settings.tooltip.arrowDistance;
@@ -636,47 +619,47 @@ mgExternal.prototype = {
 
 		switch (position) {
 			case 'top':
-				top = offset.top - containerHeight - distance - arrowSize;
+				top = sourceOffset.top - containerHeight - distance - arrowSize;
 				break;
 			case 'bottom':
-				top = offset.top + triggerHeight + distance + arrowSize;
+				top = sourceOffset.top + sourceHeight + distance + arrowSize;
 				break;
 			case 'left':
-				left = offset.left - containerWidth - distance - arrowSize;
+				left = sourceOffset.left - containerWidth - distance - arrowSize;
 				break;
 			case 'right':
-				left = offset.left + triggerWidth + distance + arrowSize;
+				left = sourceOffset.left + sourceWidth + distance + arrowSize;
 				break;
 		}
 
 		switch (modifier) {
 			case 'left':
 				if (this.settings.tooltip.positionFrom == 'limit') {
-					left = offset.left;
+					left = sourceOffset.left;
 				} else {
-					left = offset.left + (triggerWidth / 2) - arrowDistance - arrowSize;
+					left = sourceOffset.left + (sourceWidth / 2) - arrowDistance - arrowSize;
 				}
 				if (this.$tooltipArrow) {
 					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({left: (triggerWidth / 2) - arrowSize, right: 'auto'});
+						this.$tooltipArrow.css({left: (sourceWidth / 2) - arrowSize, right: 'auto'});
 					} else {
 						this.$tooltipArrow.css({left: arrowDistance, right: 'auto'});
 					}
 				}
 				break;
 			case 'center':
-				left = offset.left + (triggerWidth / 2) - (containerWidth / 2);
+				left = sourceOffset.left + (sourceWidth / 2) - (containerWidth / 2);
 				this.$tooltipArrow && this.$tooltipArrow.css({left: (containerWidth / 2) - arrowSize, right: 'auto'});
 				break;
 			case 'right':
 				if (this.settings.tooltip.positionFrom == 'limit') {
-					left = offset.left + triggerWidth - containerWidth;
+					left = sourceOffset.left + sourceWidth - containerWidth;
 				} else {
-					left = offset.left + (triggerWidth / 2) - containerWidth + arrowDistance + arrowSize;
+					left = sourceOffset.left + (sourceWidth / 2) - containerWidth + arrowDistance + arrowSize;
 				}
 				if (this.$tooltipArrow) {
 					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({left: 'auto', right: (triggerWidth / 2) - arrowSize});
+						this.$tooltipArrow.css({left: 'auto', right: (sourceWidth / 2) - arrowSize});
 					} else {
 						this.$tooltipArrow.css({left: 'auto', right: arrowDistance});
 					}
@@ -684,31 +667,31 @@ mgExternal.prototype = {
 				break;
 			case 'top':
 				if (this.settings.tooltip.positionFrom == 'limit') {
-					top = offset.top;
+					top = sourceOffset.top;
 				} else {
-					top = offset.top + (triggerHeight / 2) - arrowDistance - arrowSize;
+					top = sourceOffset.top + (sourceHeight / 2) - arrowDistance - arrowSize;
 				}
 				if (this.$tooltipArrow) {
 					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({bottom: 'auto', top: (triggerHeight / 2) - arrowSize});
+						this.$tooltipArrow.css({bottom: 'auto', top: (sourceHeight / 2) - arrowSize});
 					} else {
 						this.$tooltipArrow.css({bottom: 'auto', top: arrowDistance});
 					}
 				}
 				break;
 			case 'middle':
-				top = offset.top + (triggerHeight / 2) - (containerHeight / 2);
+				top = sourceOffset.top + (sourceHeight / 2) - (containerHeight / 2);
 				this.$tooltipArrow && this.$tooltipArrow.css({bottom: 'auto', top: (containerHeight / 2) - arrowSize});
 				break;
 			case 'bottom':
 				if (this.settings.tooltip.positionFrom == 'limit') {
-					top = offset.top + triggerHeight - containerHeight;
+					top = sourceOffset.top + sourceHeight - containerHeight;
 				} else {
-					top = offset.top + (triggerHeight / 2) - containerHeight + arrowDistance + arrowSize;
+					top = sourceOffset.top + (sourceHeight / 2) - containerHeight + arrowDistance + arrowSize;
 				}
 				if (this.$tooltipArrow) {
 					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({bottom: (triggerHeight / 2) - arrowSize, top: 'auto'});
+						this.$tooltipArrow.css({bottom: (sourceHeight / 2) - arrowSize, top: 'auto'});
 					} else {
 						this.$tooltipArrow.css({bottom: arrowDistance, top: 'auto'});
 					}

@@ -3,12 +3,11 @@
 /* Style: default modal */
 .modal .mgExternal-data {
 	background-color: #fff;
-	border: 3px solid #aaa;
+	border: 3px solid #999;
 	-webkit-border-radius: 2px;
 	   -moz-border-radius: 2px;
 	        border-radius: 2px;
 	overflow: auto;
-	padding: 35px 40px;
 	}
 
 .boxshadow .modal .mgExternal-data {
@@ -21,14 +20,13 @@
 /* Style: default tooltip */
 .tooltip .mgExternal-data {
 	background-color: #fff;
-	border: 1px solid #aaa;
+	border: 1px solid #999;
 	-webkit-border-radius: 2px;
 	   -moz-border-radius: 2px;
 	        border-radius: 2px;
 	-webkit-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 	   -moz-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 	        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-	padding: 15px;
 	}
 
 .tooltip .mgExternal-arrow-shadow {
