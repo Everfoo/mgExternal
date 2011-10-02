@@ -107,7 +107,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	this._lastSubmitName = null;
 	this._show = false;
 	this._triggerZIndexBackup = null;
-	this._triggeredStart = false;
 
 	// Set trigger bindings
 	if (this.$trigger) {
@@ -178,11 +177,6 @@ mgExternal.prototype = {
 
 		if (!this._show)
 			return;
-
-		if (!this.triggeredStart) {
-			this.triggeredStart = true;
-			this.settings.onStart.call(this);
-		}
 
 		// New content
 		if (this.settings.renew || !this.$container) {
