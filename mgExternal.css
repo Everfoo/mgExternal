@@ -36,7 +36,7 @@
 /* Style: tipsy */
 .tipsy .mgExternal-data {
 	background-color: #333;
-	border: none;
+	border: 0; /* `none` returns `medium` as width in IE, but we expect a number */
 	-webkit-border-radius: 4px;
 	   -moz-border-radius: 4px;
 	        border-radius: 4px;

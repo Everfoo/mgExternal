@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.11
+ * mgExternal 1.0.12
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -39,6 +39,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		// Core
 		display: 'modal', // modal, tooltip or inline
 		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>'),
+		appendTo: 'body',
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
@@ -164,7 +165,11 @@ mgExternal.prototype = {
 	defaults: {},
 
 	isVisible: function() {
-		return this.$container && this.$container.is(':visible') && this.$container.css('visibility') != 'hidden';
+		if (this.settings.display == 'inline') {
+			return true;
+		} else {
+			return this.$container && this.$container.is(':visible') && this.$container.css('visibility') != 'hidden';
+		}
 	},
 
 	open: function(delay) {
@@ -202,7 +207,7 @@ mgExternal.prototype = {
 
 	realClose: function() {
 
-		if (this._show || !this.isVisible() || this.settings.onBeforeClose.call(this) === false)
+		if (this._show || !this.isVisible() || this.settings.onBeforeClose.call(this) === false || this.settings.display == 'inline')
 			return;
 
 		var self = this;
@@ -240,7 +245,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		if (!this.$container)
+		if (!this.$container && this.settings.display != 'inline')
 			this.createElements();
 
 		// We remove the margin for the first DIV element due to aesthetical
@@ -305,14 +310,18 @@ mgExternal.prototype = {
 			});
 		};
 		if (this.settings.overlayOpacity > 0) {
-			$('#mgExternal-overlay').css({
+			var $overlay = $('#mgExternal-overlay');
+			$overlay.css({
 				background: this.settings.overlayColor,
 				opacity: this.settings.overlayOpacity
 			});
+			if (!$overlay.parent().is(this.settings.appendTo))
+				$overlay.detach().appendTo(this.settings.appendTo);
+
 			if (this.settings.display == 'modal') {
-				$('#mgExternal-overlay').fadeIn(this.settings.showSpeed, fadeInContainer);
+				$overlay.fadeIn(this.settings.showSpeed, fadeInContainer);
 			} else {
-				$('#mgExternal-overlay').fadeIn(this.settings.showSpeed);
+				$overlay.fadeIn(this.settings.showSpeed);
 				fadeInContainer();
 			}
 		} else {
@@ -428,6 +437,7 @@ mgExternal.prototype = {
 	},
 
 	createElements: function() {
+
 		var self = this;
 
 		if (!this.$container) {
@@ -439,7 +449,7 @@ mgExternal.prototype = {
 					zIndex: 999
 				})
 				.hide()
-				.appendTo('body')
+				.appendTo(this.settings.appendTo)
 				.bind('mouseup', function(e){
 					e.stopPropagation(); // Required if outsideClose is set to true.
 										 // mouseup event is used instead of click
@@ -457,29 +467,26 @@ mgExternal.prototype = {
 				this.$container.bind('mouseleave', function(){self.close(self.settings.hideDelay)});
 			}
 
-			if (this.settings.display != 'inline') {
+			// Resize re-position
+			$(window).bind('resize', function(){self.moveContainer()});
 
-				// Resize re-position
-				$(window).bind('resize', function(){self.moveContainer()});
+			// Hide on outside click or ESC
+			if (this.settings.outsideClose) {
 
-				// Hide on outside click or ESC
-				if (this.settings.outsideClose) {
+				// Actually using mouseup event due to IE incompatibility.
+				// Also using body instead of document as clicking on the scroll bar
+				// triggers the event on the latter, closing the container.
+				$('body').bind('mouseup', function(e){
+					if (e.which == 1)
+						self.close();
+				});
+			}
 
-					// Actually using mouseup event due to IE incompatibility.
-					// Also using body instead of document as clicking on the scroll bar
-					// triggers the event on the latter, closing the container.
-					$('body').bind('mouseup', function(e){
-						if (e.which == 1)
-							self.close();
-					});
-				}
-
-				if (this.settings.escClose) {
-					$(document).bind('keyup', function(e){
-						if (e.keyCode == 27)
-							self.close();
-					});
-				}
+			if (this.settings.escClose) {
+				$(document).bind('keyup', function(e){
+					if (e.keyCode == 27)
+						self.close();
+				});
 			}
 
 			self.settings.onCreateElements.call(self);
@@ -489,15 +496,15 @@ mgExternal.prototype = {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
-					height: $('body').height(), // 100% doesn't work properly on touchscreens
+					height: $(this.settings.appendTo).height(), // 100% doesn't work properly on touchscreens
 					left: 0,
-					position: 'fixed',
+					position: 'absolute',
 					top: 0,
-					width: $('body').width(), // 100% doesn't work properly on touchscreens
+					width: $(this.settings.appendTo).width(), // 100% doesn't work properly on touchscreens
 					zIndex: 997
 				})
 				.hide()
-				.appendTo('body');
+				.appendTo(this.settings.appendTo);
 		}
 
 		if (!this.$tooltipArrow && this.settings.display == 'tooltip' && this.settings.tooltip.arrowSize) {
