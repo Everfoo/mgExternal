@@ -604,11 +604,11 @@ mgExternal.prototype = {
 		if (position == 'top' && (sourceOffset.top - scrollTop - breatheSeparation) < containerHeight)
 			position = 'bottom';
 
-		if (position == 'left' && (sourceOffset.left - scrollLeft - breatheSeparation) < containerWidth)
-			position = 'right';
-
 		if (position == 'right' && windowWidth < (sourceOffset.left - scrollLeft + sourceWidth + containerWidth + breatheSeparation))
 			position = 'left';
+
+		if (position == 'left' && (sourceOffset.left - scrollLeft - breatheSeparation) < containerWidth)
+			position = 'right';
 
 		//---[ Position ]-----------------------------------------------------//
 
@@ -702,9 +702,7 @@ mgExternal.prototype = {
 			var arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos],
 			    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
 
-			if (arrowSeparationTop < arrowDistance && arrowSeparationBottom < arrowDistance) {
-				// ignore
-			} else {
+			if (!(arrowSeparationTop < arrowDistance && arrowSeparationBottom < arrowDistance)) {
 				if (arrowSeparationTop < arrowDistance) {
 					pos[posFit.pos] = posFit.sourceOffset + (posFit.source / 2) - arrowSize - arrowDistance;
 				}
