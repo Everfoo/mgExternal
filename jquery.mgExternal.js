@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.12
+ * mgExternal 1.0.13
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
