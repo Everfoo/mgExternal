@@ -6,6 +6,10 @@
  * Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
+// TODO:
+//   - Infinite linked tooltips
+//   - z-index over overlay
+
 (function($){
 
 $.fn.mgExternal = function(defaultContent, options) {
@@ -39,7 +43,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		// Core
 		display: 'modal', // modal, tooltip or inline
 		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>'),
-		appendTo: 'body',
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
@@ -76,7 +79,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			arrowDistance: 15,
 			arrowFrontColor: null, // Default front color is set in the CSS file,
 			arrowBorderColor: null, // Default border color is set in the CSS file,
-			fitWindow: true,
 			activeClass: 'active'
 		},
 
@@ -267,11 +269,9 @@ mgExternal.prototype = {
 		if (!this.isVisible())
 			this.$container.css('visibility', 'hidden').show();
 
-		// setTimeout(function(){
 		this.bindSpecialActions();
 		this.settings.onContentReady.call(this);
 		this.setFocus();
-		// }, 10);
 
 		if (this.settings.display != 'inline') {
 			if (this.isVisible()) {
@@ -315,8 +315,6 @@ mgExternal.prototype = {
 				background: this.settings.overlayColor,
 				opacity: this.settings.overlayOpacity
 			});
-			if (!$overlay.parent().is(this.settings.appendTo))
-				$overlay.detach().appendTo(this.settings.appendTo);
 
 			if (this.settings.display == 'modal') {
 				$overlay.fadeIn(this.settings.showSpeed, fadeInContainer);
@@ -329,9 +327,9 @@ mgExternal.prototype = {
 		}
 
 		// Reposition the container
-		this.moveContainer();
+		this.moveContainer(true);
 		this.$container.find('img').bind('load', function(){
-			self.moveContainer();
+			self.moveContainer(true);
 		});
 	},
 
@@ -449,7 +447,7 @@ mgExternal.prototype = {
 					zIndex: 999
 				})
 				.hide()
-				.appendTo(this.settings.appendTo)
+				.appendTo('body')
 				.bind('mouseup', function(e){
 					e.stopPropagation(); // Required if outsideClose is set to true.
 										 // mouseup event is used instead of click
@@ -469,6 +467,9 @@ mgExternal.prototype = {
 
 			// Resize re-position
 			$(window).bind('resize', function(){self.moveContainer()});
+
+			if (this.settings.display == 'tooltip')
+				$(window).bind('scroll', function(){self.moveContainer()});
 
 			// Hide on outside click or ESC
 			if (this.settings.outsideClose) {
@@ -496,15 +497,15 @@ mgExternal.prototype = {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
-					height: $(this.settings.appendTo).height(), // 100% doesn't work properly on touchscreens
+					height: $(document).height(), // 100% doesn't work properly on touchscreens
 					left: 0,
 					position: 'absolute',
 					top: 0,
-					width: $(this.settings.appendTo).width(), // 100% doesn't work properly on touchscreens
+					width: $(document).width(), // 100% doesn't work properly on touchscreens
 					zIndex: 997
 				})
 				.hide()
-				.appendTo(this.settings.appendTo);
+				.appendTo('body');
 		}
 
 		if (!this.$tooltipArrow && this.settings.display == 'tooltip' && this.settings.tooltip.arrowSize) {
@@ -534,7 +535,11 @@ mgExternal.prototype = {
 		}
 	},
 
-	moveContainer: function() {
+	moveContainer: function(force) {
+
+		if (!force && !this.isVisible())
+			return;
+
 		switch (this.settings.display) {
 			case 'modal':
 				this.moveModal();
@@ -563,9 +568,21 @@ mgExternal.prototype = {
 		this.$container.css({top: top, left: left});
 	},
 
-	moveTooltip: function(position, modifier, changeCount) {
-		var top = 0,
-		    left = 0,
+	moveTooltip: function() {
+
+		//---[ Fix narrow blocks past body width ]----------------------------//
+
+		this.$container.css({top: 0, left: 0});
+		this.$data
+			.css('height', 'auto').css('height', this.$data.height())
+			.css('width',  'auto').css('width',  this.$data.width());
+
+		//---[ Useful vars ]--------------------------------------------------//
+
+		var pos = {top: 0, left: 0},
+		    breatheSeparation = 15,
+		    windowHeight = $(window).height(),
+		    windowWidth = $(window).width(),
 		    containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true),
 		    sourceOffset = this.settings.tooltip.positionSource.offset(),
@@ -573,20 +590,149 @@ mgExternal.prototype = {
 		    sourceWidth = this.settings.tooltip.positionSource.outerWidth(),
 		    distance = this.settings.tooltip.distance,
 		    arrowSize = this.settings.tooltip.arrowSize,
-		    arrowDistance = this.settings.tooltip.arrowDistance;
+		    arrowDistance = this.settings.tooltip.arrowDistance,
+		    scrollTop = $(document).scrollTop(),
+		    scrollLeft = $(document).scrollLeft(),
+			position = this.settings.tooltip.position.split(' ')[0],
+			modifier = this.settings.tooltip.position.split(' ')[1];
 
-		position = position || this.settings.tooltip.position.split(' ')[0];
-		modifier = modifier || this.settings.tooltip.position.split(' ')[1];
-		changeCount = changeCount || 0;
+		//---[ Fit in window 1 ]----------------------------------------------//
+
+		if (position == 'bottom' && windowHeight < (sourceOffset.top - scrollTop + sourceHeight + containerHeight + breatheSeparation))
+			position = 'top';
+
+		if (position == 'top' && (sourceOffset.top - scrollTop - breatheSeparation) < containerHeight)
+			position = 'bottom';
+
+		if (position == 'left' && (sourceOffset.left - scrollLeft - breatheSeparation) < containerWidth)
+			position = 'right';
+
+		if (position == 'right' && windowWidth < (sourceOffset.left - scrollLeft + sourceWidth + containerWidth + breatheSeparation))
+			position = 'left';
+
+		//---[ Position ]-----------------------------------------------------//
+
+		switch (position) {
+			case 'top':
+				pos.top = sourceOffset.top - containerHeight - distance - arrowSize;
+				break;
+			case 'bottom':
+				pos.top = sourceOffset.top + sourceHeight + distance + arrowSize;
+				break;
+			case 'left':
+				pos.left = sourceOffset.left - containerWidth - distance - arrowSize;
+				break;
+			case 'right':
+				pos.left = sourceOffset.left + sourceWidth + distance + arrowSize;
+				break;
+		}
+
+		//---[ Modifier ]-----------------------------------------------------//
+
+		switch (modifier) {
+			case 'top':
+				pos.top = sourceOffset.top;
+				break;
+			case 'middle':
+				pos.top = sourceOffset.top - (containerHeight/2) + (sourceHeight/2);
+				break;
+			case 'bottom':
+				pos.top = sourceOffset.top - containerHeight + sourceHeight;
+				break;
+			case 'left':
+				pos.left = sourceOffset.left;
+				break;
+			case 'center':
+				pos.left = sourceOffset.left - (containerWidth/2) + (sourceWidth/2);
+				break;
+			case 'right':
+				pos.left = sourceOffset.left - containerWidth + sourceWidth;
+				break;
+		}
+
+		//---[ Fit in window 2 ]----------------------------------------------//
+
+		var move, posFit;
+
+		if (position == 'left' || position == 'right') {
+			posFit = {
+				pos: 'top',
+				source: sourceHeight,
+				sourceOffset: sourceOffset.top,
+				container: containerHeight,
+				window: windowHeight,
+				scroll: scrollTop
+			};
+		} else {
+			posFit = {
+				pos: 'left',
+				source: sourceWidth,
+				sourceOffset: sourceOffset.left,
+				container: containerWidth,
+				window: windowWidth,
+				scroll: scrollLeft
+			};
+		}
+
+		while ((pos[posFit.pos] - posFit.scroll + posFit.container + breatheSeparation) > posFit.window) {
+			move = false;
+			if (posFit.container >= posFit.source) {
+				if ((pos[posFit.pos] + posFit.container) > (posFit.sourceOffset + posFit.source))
+					move = true;
+			} else {
+				if (pos[posFit.pos] > posFit.sourceOffset)
+					move = true;
+			}
+			if (move) pos[posFit.pos]--; else break;
+		}
+
+		while ((pos[posFit.pos] - posFit.scroll) < breatheSeparation) {
+			move = false;
+			if (posFit.container >= posFit.source) {
+				if (pos[posFit.pos] < posFit.sourceOffset)
+					move = true;
+			} else {
+				if ((pos[posFit.pos] + posFit.container) < (posFit.sourceOffset + posFit.source))
+					move = true;
+			}
+			if (move) pos[posFit.pos]++; else break;
+		}
+
+		if (arrowSize && posFit.source < (arrowSize + arrowDistance*2)) {
+			var arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos],
+			    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
+
+			if (arrowSeparationTop < arrowDistance && arrowSeparationBottom < arrowDistance) {
+				// ignore
+			} else {
+				if (arrowSeparationTop < arrowDistance) {
+					pos[posFit.pos] = posFit.sourceOffset + (posFit.source / 2) - arrowSize - arrowDistance;
+				}
+				if (arrowSeparationBottom < arrowDistance) {
+					pos[posFit.pos] = posFit.sourceOffset - posFit.container + (posFit.source / 2) + arrowSize + arrowDistance;
+					arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos];
+				}
+				arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos];
+			    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
+				if (arrowSeparationTop < arrowDistance || arrowSeparationBottom < arrowDistance)
+					pos[posFit.pos] = posFit.sourceOffset - ((posFit.container - (arrowSize * 2)) / 2);
+			}
+		}
+
+		//---[ Arrow ]--------------------------------------------------------//
 
 		if (arrowSize) {
 			if (!this.$tooltipArrow)
 				this.createElements();
 
 			this.$tooltipArrow.show();
-			if (/top|bottom/.test(position)) {
+
+			if (position == 'top' || position == 'bottom') {
 				this.$tooltipArrow.css({
 					height: arrowSize,
+					left: (containerWidth < sourceWidth)
+						? (containerWidth / 2) - arrowSize
+						: (sourceOffset.left - pos.left) + (sourceWidth / 2) - arrowSize,
 					top: position == 'top' ? 'auto' : -arrowSize,
 					width: arrowSize*2
 				}).find('div').css({
@@ -603,6 +749,9 @@ mgExternal.prototype = {
 					height: arrowSize*2,
 					left: position == 'left' ? 'auto' : -arrowSize,
 					right: position == 'right' ? 'auto' : -arrowSize,
+					top: (containerHeight < sourceHeight)
+						? (containerHeight / 2) - arrowSize
+						: (sourceOffset.top - pos.top) + (sourceHeight / 2) - arrowSize,
 					width: arrowSize
 				}).find('div').css({
 					borderBottomColor: 'transparent',
@@ -618,132 +767,7 @@ mgExternal.prototype = {
 			this.$tooltipArrow.hide();
 		}
 
-		switch (position) {
-			case 'top':
-				top = sourceOffset.top - containerHeight - distance - arrowSize;
-				break;
-			case 'bottom':
-				top = sourceOffset.top + sourceHeight + distance + arrowSize;
-				break;
-			case 'left':
-				left = sourceOffset.left - containerWidth - distance - arrowSize;
-				break;
-			case 'right':
-				left = sourceOffset.left + sourceWidth + distance + arrowSize;
-				break;
-		}
-
-		switch (modifier) {
-			case 'left':
-				if (this.settings.tooltip.positionFrom == 'limit') {
-					left = sourceOffset.left;
-				} else {
-					left = sourceOffset.left + (sourceWidth / 2) - arrowDistance - arrowSize;
-				}
-				if (this.$tooltipArrow) {
-					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({left: (sourceWidth / 2) - arrowSize, right: 'auto'});
-					} else {
-						this.$tooltipArrow.css({left: arrowDistance, right: 'auto'});
-					}
-				}
-				break;
-			case 'center':
-				left = sourceOffset.left + (sourceWidth / 2) - (containerWidth / 2);
-				this.$tooltipArrow && this.$tooltipArrow.css({left: (containerWidth / 2) - arrowSize, right: 'auto'});
-				break;
-			case 'right':
-				if (this.settings.tooltip.positionFrom == 'limit') {
-					left = sourceOffset.left + sourceWidth - containerWidth;
-				} else {
-					left = sourceOffset.left + (sourceWidth / 2) - containerWidth + arrowDistance + arrowSize;
-				}
-				if (this.$tooltipArrow) {
-					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({left: 'auto', right: (sourceWidth / 2) - arrowSize});
-					} else {
-						this.$tooltipArrow.css({left: 'auto', right: arrowDistance});
-					}
-				}
-				break;
-			case 'top':
-				if (this.settings.tooltip.positionFrom == 'limit') {
-					top = sourceOffset.top;
-				} else {
-					top = sourceOffset.top + (sourceHeight / 2) - arrowDistance - arrowSize;
-				}
-				if (this.$tooltipArrow) {
-					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({bottom: 'auto', top: (sourceHeight / 2) - arrowSize});
-					} else {
-						this.$tooltipArrow.css({bottom: 'auto', top: arrowDistance});
-					}
-				}
-				break;
-			case 'middle':
-				top = sourceOffset.top + (sourceHeight / 2) - (containerHeight / 2);
-				this.$tooltipArrow && this.$tooltipArrow.css({bottom: 'auto', top: (containerHeight / 2) - arrowSize});
-				break;
-			case 'bottom':
-				if (this.settings.tooltip.positionFrom == 'limit') {
-					top = sourceOffset.top + sourceHeight - containerHeight;
-				} else {
-					top = sourceOffset.top + (sourceHeight / 2) - containerHeight + arrowDistance + arrowSize;
-				}
-				if (this.$tooltipArrow) {
-					if (this.settings.tooltip.positionFrom == 'limit' && !arrowDistance) {
-						this.$tooltipArrow.css({bottom: (sourceHeight / 2) - arrowSize, top: 'auto'});
-					} else {
-						this.$tooltipArrow.css({bottom: arrowDistance, top: 'auto'});
-					}
-				}
-				break;
-		}
-
-		if (this.settings.tooltip.fitWindow && changeCount < 10) {
-
-			// Left margin
-			if (left < 0) {
-				if (position == 'left')
-					return this.moveTooltip('right', modifier, changeCount+1);
-				if (modifier == 'right')
-					return this.moveTooltip(position, 'center', changeCount+1);
-				if (modifier == 'center')
-					return this.moveTooltip(position, 'left', changeCount+1);
-			}
-
-			// Right margin
-			if ((left + containerWidth + 5) >= $(window).width()) {
-				if (position == 'right')
-					return this.moveTooltip('left', modifier, changeCount+1);
-				if (modifier == 'left')
-					return this.moveTooltip(position, 'center', changeCount+1);
-				if (modifier == 'center')
-					return this.moveTooltip(position, 'right', changeCount+1);
-			}
-
-			// Top margin
-			if (top < ($(document).scrollTop() - 5)) {
-				if (position == 'top')
-					return this.moveTooltip('bottom', modifier, changeCount+1);
-				if (modifier == 'bottom')
-					return this.moveTooltip(position, 'middle', changeCount+1);
-				if (modifier == 'middle')
-					return this.moveTooltip(position, 'top', changeCount+1);
-			}
-
-			// Bottom margin
-			if ((top + containerHeight + 5) >= ($(window).height()+$(document).scrollTop())) {
-				if (position == 'bottom')
-					return this.moveTooltip('top', modifier, changeCount+1);
-				if (modifier == 'top')
-					return this.moveTooltip(position, 'middle', changeCount+1);
-				if (modifier == 'middle')
-					return this.moveTooltip(position, 'bottom', changeCount+1);
-			}
-		}
-
-		this.$container.css({top: top, left: left});
+		this.$container.css(pos);
 	}
 };
 
