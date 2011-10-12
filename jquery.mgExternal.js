@@ -185,12 +185,22 @@ mgExternal.prototype = {
 		if (!this._show)
 			return;
 
+		var self = this;
+
 		// New content
 		if (this.settings.renew || !this.$container) {
 			this.settings.ajaxUrl = this._defaultAjaxUrl;
 			this._lastSubmitName = null;
+
+			var url = this.settings.ajaxUrl || this.$trigger.attr('href');
+
 			if (this._defaultContent) {
 				this.setContent(this._defaultContent);
+			} else if (url.match(/\.(jpg|gif|png|bmp|jpeg)(.*)?$/i)) {
+				this.setContent('<img src="'+url+'" style="display:block;" />');
+				setTimeout(function(){
+					self.moveContainer();
+				}, 1000);
 			} else {
 				this.loadAjaxContent();
 			}
