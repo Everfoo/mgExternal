@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.13
+ * mgExternal 1.0.14
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -374,23 +374,43 @@ mgExternal.prototype = {
 			});
 		}
 
+		// We'll use an iframe as an ajax workaround if we're dealing with file uploads
 		if (submit && submit.attr('enctype') == 'multipart/form-data') {
-			alert("multipart form");
-			/*var iframeName = 'mgExternal-iframe'+Math.floor(Math.random()*99999);
-			$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="javascript:false;" style="display:none;"></iframe>')
+
+			// Create a random ID for the new iframe
+			var iframeName = 'mgExternal-iframe'+Math.floor(Math.random()*99999);
+
+			// Create the iframe
+			$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="" style="display:none;"></iframe>')
 				.appendTo('body')
-				//.append(form.parent().html())
 				.bind('load', function(){
-					var contents = $(this).contents().find('body').contents();
-					if (contents.text() != 'false')
-						self.setContent($(this).contents().find('body').contents());
+					var response = $(this).contents().find('body').html();
+					// Is it a JSON object?
+					try {
+						var data = eval('('+response+')');
+						if (typeof data == 'object') {
+							self.settings.onJsonData.call(self, data);
+							return;
+						}
+					} catch (err) {}
+					// ... or just plain HTML?
+					self.setContent(response);
 				});
-			form.attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
-				.attr('target', iframeName)
-				.append('<input type="hidden" name="ajax" value="true" />')
-				.append('<input type="hidden" name="'+form.find(':submit').attr('name')+'" value="'+form.find(':submit').val()+'" />')
-				.unbind('submit')
-				.trigger('submit');*/
+
+			// Leave a visible copy of the form for usability reasons (we'll move the original)
+			submit.clone().insertAfter(submit);
+
+			// Add ajaxData vars as hidden inputs
+			$.each(this.settings.ajaxData, function(name, value){
+				submit.append('<input type="hidden" name="'+name+'" value="'+value+'" />');
+			});
+
+			// Move form inside the iframe (Chrome had issues otherwise)
+			submit.appendTo($('#'+iframeName))
+				  .attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
+				  .attr('target', iframeName)
+				  .unbind('submit')
+				  .trigger('submit');
 		} else {
 			$.ajax({
 				url: this.settings.ajaxUrl || this.$trigger.attr('href'),
