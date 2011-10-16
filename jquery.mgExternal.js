@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.14
+ * mgExternal 1.0.15
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -75,7 +75,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			positionFrom: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 'limit' : 'center', // center or limit
 			positionSource: $(trigger),
 			distance: 0,
-			arrowSize: 9, // Arrow size in pixels
+			arrowSize: 8, // Arrow size in pixels
 			arrowDistance: 15,
 			arrowFrontColor: null, // Default front color is set in the CSS file,
 			arrowBorderColor: null, // Default border color is set in the CSS file,
@@ -419,6 +419,7 @@ mgExternal.prototype = {
 			submit.appendTo($('#'+iframeName))
 				  .attr('action', this.settings.ajaxUrl || this.$trigger.attr('href'))
 				  .attr('target', iframeName)
+				  .append('<input type="hidden" name="is_iframe" value="true" />')
 				  .unbind('submit')
 				  .trigger('submit');
 		} else {
@@ -434,7 +435,7 @@ mgExternal.prototype = {
 					}
 				},
 				error: function(jqXHR, textStatus, errorThrown){
-					self.setContent("<div class=\"notice alert\">S'ha produït un error</div>");
+					self.setContent('<div class="notice alert">S\'ha produït un error</div>');
 				}
 			});
 		}
@@ -527,11 +528,11 @@ mgExternal.prototype = {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
-					height: $(document).height(), // 100% doesn't work properly on touchscreens
+					height: $('body').height(), // 100% doesn't work properly on touchscreens
 					left: 0,
 					position: 'absolute',
 					top: 0,
-					width: $(document).width(), // 100% doesn't work properly on touchscreens
+					width: $('body').width(), // 100% doesn't work properly on touchscreens
 					zIndex: 997
 				})
 				.hide()
@@ -595,7 +596,7 @@ mgExternal.prototype = {
 		if (left < 15)
 			left = 15;
 
-		this.$container.css({top: top, left: left});
+		this.$container.stop().animate({top: top, left: left}, 500);
 	},
 
 	moveTooltip: function() {
@@ -604,8 +605,8 @@ mgExternal.prototype = {
 
 		this.$container.css({top: 0, left: 0});
 		this.$data
-			.css('height', 'auto').css('height', this.$data.height())
-			.css('width',  'auto').css('width',  this.$data.width());
+			.css('height', this.settings.dataCss.height || 'auto').css('height', this.$data.height())
+			.css('width', this.settings.dataCss.width || 'auto').css('width',  this.$data.width());
 
 		//---[ Useful vars ]--------------------------------------------------//
 
