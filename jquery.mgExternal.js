@@ -68,6 +68,11 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
 		ajaxData: {},
 
+		// Modal settings
+		modal: {
+			animateSpeed: 500
+		},
+
 		// Tooltip settings
 		tooltip: {
 			bind: 'click', // click, hover or focus
@@ -596,7 +601,10 @@ mgExternal.prototype = {
 		if (left < 15)
 			left = 15;
 
-		this.$container.stop().animate({top: top, left: left}, 500);
+		if (this.settings.modal.animateSpeed > 0)
+			this.$container.stop().animate({top: top, left: left}, this.settings.modal.animateSpeed);
+		else
+			this.$container.css({top: top, left: left});
 	},
 
 	moveTooltip: function() {
