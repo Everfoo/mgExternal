@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.15
+ * mgExternal 1.0.16
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -602,9 +602,9 @@ mgExternal.prototype = {
 			left = 15;
 
 		if (this.settings.modal.animateSpeed > 0)
-			this.$container.stop().animate({top: top, left: left}, this.settings.modal.animateSpeed);
+			this.$container.stop().animate({top: top, left: left, opacity: 1}, this.settings.modal.animateSpeed);
 		else
-			this.$container.css({top: top, left: left});
+			this.$container.css({top: top, left: left, opacity: 1});
 	},
 
 	moveTooltip: function() {
