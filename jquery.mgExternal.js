@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.16
+ * mgExternal 1.0.17
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -229,7 +229,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		if (this.settings.display == 'tooltip') {
+		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
 			this.$trigger.removeClass(this.settings.tooltip.activeClass).css({
 				position: this._triggerZIndexBackup.position,
 				zIndex: this._triggerZIndexBackup.zIndex
@@ -305,13 +305,13 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		if (this.settings.display == 'tooltip') {
+		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
 			this._triggerZIndexBackup = {
-				position: this.$trigger.css('position'),
-				zIndex: this.$trigger.css('z-index')
+				position: this.$trigger.css('position') == 'static' ? '' : this.$trigger.css('position'),
+				zIndex: this.$trigger.css('z-index') == 0 ? '' : this.$trigger.css('z-index')
 			};
 			this.$trigger.addClass(this.settings.tooltip.activeClass).css({
-				position: this._triggerZIndexBackup.position == 'static' ? 'relative' : null,
+				position: this._triggerZIndexBackup.position ? null : 'relative',
 				zIndex: 998
 			});
 		}
@@ -369,6 +369,9 @@ mgExternal.prototype = {
 			self.close();
 			e.preventDefault();
 		});
+		var onLoad = this.$content.find('.mgExternal-onLoad').data('mgExternal-onLoad');
+		if (onLoad)
+			onLoad.call(this);
 	},
 
 	loadAjaxContent: function(submit) {
