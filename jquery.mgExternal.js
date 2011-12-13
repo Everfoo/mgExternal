@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.17
+ * mgExternal 1.0.18
  * www.magicalglobe.com/projects/mgExternal
  *
  * Copyright 2011 Ricard Osorio Mañanas
@@ -10,7 +10,7 @@
 //   - Infinite linked tooltips
 //   - z-index over overlay
 
-(function($){
+(function($, undefined){
 
 $.fn.mgExternal = function(defaultContent, options) {
 	return this.each(function(){
@@ -24,7 +24,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		return new mgExternal(trigger, defaultContent, options);
 
 	// trigger is optional when used only once. Eg: mgExternal("Hi!");
-	if (trigger.tagName == undefined) {
+	if (trigger.tagName === undefined) {
 		options = defaultContent;
 		defaultContent = trigger;
 		trigger = null;
@@ -182,10 +182,10 @@ mgExternal.prototype = {
 	open: function(delay) {
 		var self = this;
 		this._show = true;
-		setTimeout(function(){self.realOpen()}, delay || 10);
+		setTimeout(function(){self._open()}, delay || 10);
 	},
 
-	realOpen: function() {
+	_open: function() {
 
 		if (!this._show)
 			return;
@@ -219,10 +219,10 @@ mgExternal.prototype = {
 	close: function(delay) {
 		var self = this;
 		this._show = false;
-		setTimeout(function(){self.realClose()}, delay || 10);
+		setTimeout(function(){self._close()}, delay || 10);
 	},
 
-	realClose: function() {
+	_close: function() {
 
 		if (this._show || !this.isVisible() || this.settings.onBeforeClose.call(this) === false || this.settings.display == 'inline')
 			return;
@@ -614,10 +614,22 @@ mgExternal.prototype = {
 
 		//---[ Fix narrow blocks past body width ]----------------------------//
 
-		this.$container.css({top: 0, left: 0});
+		var $tempContainer = this.$container.clone();
+
+		$tempContainer
+			.css({
+				left: 0,
+				top: 0,
+				position: 'absolute',
+				visibility: 'hidden'
+			})
+			.appendTo('body');
+
 		this.$data
-			.css('height', this.settings.dataCss.height || 'auto').css('height', this.$data.height())
-			.css('width', this.settings.dataCss.width || 'auto').css('width',  this.$data.width());
+			.css('height', this.settings.dataCss.height || 'auto').css('height', $tempContainer.children().height())
+			.css('width', this.settings.dataCss.width || 'auto').css('width',  $tempContainer.children().width());
+
+		$tempContainer.remove();
 
 		//---[ Useful vars ]--------------------------------------------------//
 
