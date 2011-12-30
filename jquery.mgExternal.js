@@ -1,6 +1,5 @@
 /**
- * mgExternal 1.0.18
- * www.magicalglobe.com/projects/mgExternal
+ * mgExternal 1.0.19
  *
  * Copyright 2011 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
@@ -30,8 +29,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		trigger = null;
 	}
 
-	// No defaultContent is required, as long as settings.ajaxUrl or href
-	// attribute are provided
+	// No defaultContent is required, as long as settings.ajaxUrl is set
+	// or an href attribute is provided
 	if (typeof defaultContent == 'object') {
 		options = defaultContent;
 		defaultContent = null;
@@ -46,7 +45,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
-		outsideClose: true, // Hide container when a click occurs outside
+		outsideClose: true, // Hide container when an outside click occurs
 		escClose: true, // Hide container when the ESC key is pressed
 		destroyOnClose: !trigger, // Destroy all generated elements and remove bindings
 
@@ -77,7 +76,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		tooltip: {
 			bind: 'click', // click, hover or focus
 			position: 'top center', // top/bottom left/center/right, or left/right top/middle/bottom
-			positionFrom: (options && options.tooltip && options.tooltip.arrowSize == 0) ? 'limit' : 'center', // center or limit
 			positionSource: $(trigger),
 			distance: 0,
 			arrowSize: 8, // Arrow size in pixels
@@ -623,11 +621,17 @@ mgExternal.prototype = {
 				position: 'absolute',
 				visibility: 'hidden'
 			})
+			.children()
+				.css({
+					height: '',
+					width: ''
+				})
+				.end()
 			.appendTo('body');
 
 		this.$data
-			.css('height', this.settings.dataCss.height || 'auto').css('height', $tempContainer.children().height())
-			.css('width', this.settings.dataCss.width || 'auto').css('width',  $tempContainer.children().width());
+			.css('height', this.settings.dataCss.height || '').css('height', $tempContainer.children().height())
+			.css('width', this.settings.dataCss.width || '').css('width',  $tempContainer.children().width());
 
 		$tempContainer.remove();
 
@@ -647,8 +651,8 @@ mgExternal.prototype = {
 		    arrowDistance = this.settings.tooltip.arrowDistance,
 		    scrollTop = $(document).scrollTop(),
 		    scrollLeft = $(document).scrollLeft(),
-			position = this.settings.tooltip.position.split(' ')[0],
-			modifier = this.settings.tooltip.position.split(' ')[1];
+		    position = this.settings.tooltip.position.split(' ')[0],
+		    modifier = this.settings.tooltip.position.split(' ')[1];
 
 		//---[ Fit in window 1 ]----------------------------------------------//
 
@@ -785,7 +789,7 @@ mgExternal.prototype = {
 					left: (containerWidth < sourceWidth)
 						? (containerWidth / 2) - arrowSize
 						: (sourceOffset.left - pos.left) + (sourceWidth / 2) - arrowSize,
-					top: position == 'top' ? 'auto' : -arrowSize,
+					top: position == 'top' ? '' : -arrowSize,
 					width: arrowSize*2
 				}).find('div').css({
 					borderLeftColor: 'transparent',
@@ -799,8 +803,8 @@ mgExternal.prototype = {
 			} else {
 				this.$tooltipArrow.css({
 					height: arrowSize*2,
-					left: position == 'left' ? 'auto' : -arrowSize,
-					right: position == 'right' ? 'auto' : -arrowSize,
+					left: position == 'left' ? '' : -arrowSize,
+					right: position == 'right' ? '' : -arrowSize,
 					top: (containerHeight < sourceHeight)
 						? (containerHeight / 2) - arrowSize
 						: (sourceOffset.top - pos.top) + (sourceHeight / 2) - arrowSize,
