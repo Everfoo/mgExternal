@@ -5,10 +5,6 @@
  * Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
-// TODO:
-//   - Infinite linked tooltips
-//   - z-index over overlay
-
 (function($, undefined){
 
 $.fn.mgExternal = function(defaultContent, options) {
