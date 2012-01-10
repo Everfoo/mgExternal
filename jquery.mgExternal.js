@@ -176,7 +176,8 @@ mgExternal.prototype = {
 	open: function(delay) {
 		var self = this;
 		this._show = true;
-		setTimeout(function(){self._open()}, delay || 10);
+		delay ? setTimeout(function(){self._open()}, delay) : self._open(); // Using a delay value of `0` would still
+		                                                                    // create a noticeable visual effect
 	},
 
 	_open: function() {
@@ -185,6 +186,8 @@ mgExternal.prototype = {
 			return;
 
 		var self = this;
+
+		this.$trigger.addClass(this.settings.tooltip.activeClass);
 
 		// New content
 		if (this.settings.renew || !this.$container) {
@@ -213,7 +216,7 @@ mgExternal.prototype = {
 	close: function(delay) {
 		var self = this;
 		this._show = false;
-		setTimeout(function(){self._close()}, delay || 10);
+		delay ? setTimeout(function(){self._close()}, delay) : self._close();
 	},
 
 	_close: function() {
@@ -300,8 +303,6 @@ mgExternal.prototype = {
 			return;
 
 		var self = this;
-
-		this.$trigger.addClass(this.settings.tooltip.activeClass);
 
 		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
 			this._triggerZIndexBackup = {
