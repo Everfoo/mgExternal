@@ -1,7 +1,7 @@
 /**
- * mgExternal 1.0.19
+ * mgExternal 1.0.20
  *
- * Copyright 2011 Ricard Osorio Mañanas
+ * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
  */
 
@@ -47,7 +47,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 		// Appearance
 		dataCss: {}, // Custom data CSS
-		extraClass: (options && options.display) ? (options.display != 'inline' ? options.display : null) : 'modal',
+		extraClass: (options && options.display) ? (options.display != 'inline' ? 'mgE-'+options.display : null) : 'mgE-modal',
 		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Show delay in ms
 		hideDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Hide delay in ms
 		showSpeed: 300,
@@ -223,8 +223,10 @@ mgExternal.prototype = {
 
 		var self = this;
 
+		this.$trigger.removeClass(this.settings.tooltip.activeClass);
+
 		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
-			this.$trigger.removeClass(this.settings.tooltip.activeClass).css({
+			this.$trigger.css({
 				position: this._triggerZIndexBackup.position,
 				zIndex: this._triggerZIndexBackup.zIndex
 			});
@@ -299,12 +301,14 @@ mgExternal.prototype = {
 
 		var self = this;
 
+		this.$trigger.addClass(this.settings.tooltip.activeClass);
+
 		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
 			this._triggerZIndexBackup = {
 				position: this.$trigger.css('position') == 'static' ? '' : this.$trigger.css('position'),
 				zIndex: this.$trigger.css('z-index') == 0 ? '' : this.$trigger.css('z-index')
 			};
-			this.$trigger.addClass(this.settings.tooltip.activeClass).css({
+			this.$trigger.css({
 				position: this._triggerZIndexBackup.position ? null : 'relative',
 				zIndex: 998
 			});
@@ -507,10 +511,8 @@ mgExternal.prototype = {
 			// Hide on outside click or ESC
 			if (this.settings.outsideClose) {
 
-				// Actually using mouseup event due to IE incompatibility.
-				// Also using body instead of document as clicking on the scroll bar
-				// triggers the event on the latter, closing the container.
-				$('body').bind('mouseup', function(e){
+				// Using mouseup event due to IE incompatibility
+				$(document).bind('mouseup', function(e){
 					if (e.which == 1)
 						self.close();
 				});
@@ -530,11 +532,11 @@ mgExternal.prototype = {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
-					height: $('body').height(), // 100% doesn't work properly on touchscreens
+					height: '100%', // 100% doesn't work properly on touchscreens
 					left: 0,
-					position: 'absolute',
+					position: 'fixed',
 					top: 0,
-					width: $('body').width(), // 100% doesn't work properly on touchscreens
+					width: '100%', // 100% doesn't work properly on touchscreens
 					zIndex: 997
 				})
 				.hide()

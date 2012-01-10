@@ -1,24 +1,20 @@
 /*** mgExternal ***/
 
 /* Style: default modal */
-.modal .mgExternal-data {
+.mgE-modal .mgExternal-data {
 	background-color: #fff;
-	border: 3px solid #999;
+	border: 1px solid #999;
 	-webkit-border-radius: 2px;
 	   -moz-border-radius: 2px;
 	        border-radius: 2px;
-	overflow: auto;
-	}
-
-.boxshadow .modal .mgExternal-data {
-	border-width: 1px;
 	-webkit-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 	   -moz-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 	        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-	}
+	overflow: auto;
+}
 
 /* Style: default tooltip */
-.tooltip .mgExternal-data {
+.mgE-tooltip .mgExternal-data {
 	background-color: #fff;
 	border: 1px solid #999;
 	-webkit-border-radius: 2px;
@@ -27,14 +23,14 @@
 	-webkit-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 	   -moz-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 	        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-	}
+}
 
-.tooltip .mgExternal-arrow-shadow {
+.mgE-tooltip .mgExternal-arrow-shadow {
 	border-color: #888;
-	}
+}
 
 /* Style: tipsy */
-.tipsy .mgExternal-data {
+.mgE-tipsy .mgExternal-data {
 	background-color: #333;
 	border: 0; /* `none` returns `medium` as width in IE, but we expect a number */
 	-webkit-border-radius: 4px;
@@ -46,4 +42,26 @@
 	color: #fff;
 	font-size: 11px;
 	padding: 8px 10px;
-	}
+}
+
+/* Style: options menu */
+
+.mgE-options ul {
+	max-height: 360px;
+	min-width: 150px;
+	overflow: auto;
+	padding: 6px 0;
+}
+
+.mgE-options a {
+	color: #333;
+	display: block;
+	padding: 2px 30px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.mgE-options a:hover,
+.mgE-options li.selected a {
+	background-color: #eee;
+}
