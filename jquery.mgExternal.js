@@ -512,8 +512,10 @@ mgExternal.prototype = {
 			// Hide on outside click or ESC
 			if (this.settings.outsideClose) {
 
-				// Using mouseup event due to IE incompatibility
-				$(document).bind('mouseup', function(e){
+				// Using mouseup event due to IE incompatibility. Also using
+				// body instead of document as clicking on the sidebar would
+				// trigger the event.
+				$('body').bind('mouseup', function(e){
 					if (e.which == 1)
 						self.close();
 				});
