@@ -1,7 +1,7 @@
 /*** mgExternal ***/
 
 /* Style: default modal */
-.mgE-modal .mgExternal-data {
+.mgE-modal .mgExternal-content {
 	background-color: #fff;
 	border: 1px solid #999;
 	-webkit-border-radius: 2px;
@@ -14,7 +14,7 @@
 }
 
 /* Style: default tooltip */
-.mgE-tooltip .mgExternal-data {
+.mgE-tooltip .mgExternal-content {
 	background-color: #fff;
 	border: 1px solid #999;
 	-webkit-border-radius: 2px;
@@ -30,7 +30,7 @@
 }
 
 /* Style: tipsy */
-.mgE-tipsy .mgExternal-data {
+.mgE-tipsy .mgExternal-content {
 	background-color: #333;
 	border: 0; /* `none` returns `medium` as width in IE, but we expect a number */
 	-webkit-border-radius: 4px;
@@ -46,11 +46,26 @@
 
 /* Style: options menu */
 
-.mgE-options ul {
+.mgE-options .mgExternal-content {
+	margin: -1px 0;
 	max-height: 360px;
-	min-width: 150px;
+	min-width: 130px;
 	overflow: auto;
 	padding: 6px 0;
+}
+
+.mgE-options ul {
+	margin: 0;
+}
+
+.mgE-options ul + ul {
+	border-top: 1px solid #eee;
+	margin-top: 8px;
+	padding-top: 8px;
+}
+
+.mgE-options li {
+	list-style: none;
 }
 
 .mgE-options a {

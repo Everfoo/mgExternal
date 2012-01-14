@@ -40,19 +40,22 @@
 	<h4>Default tooltip</h4>
 	<p><a class="btn" id="test-default-tooltip">Open tooltip</a></p>
 	<h4>Options menu</h4>
-	<p><a class="btn" id="test-options-menu">Open options menu</a></p>
+	<p><a class="btn" id="test-options-menu">Open options menu</a> <a class="btn" id="test-options-menu-long" style="margin-left:5px;">Open options long menu</a></p>
 	<h4>Tooltip with overlay</h4>
 	<p><a class="btn" id="test-tooltip-overlay">Open tooltip with overlay</a></p>
 </div>
 
 <script>
 
-$(document).live('a[href="#"]').click(false);
+$(document).live('a[href="#"]').click(function(e){
+	if (e.which == 1)
+		e.preventDefault();
+});
 
 $('#test-default-modal').mgExternal(
 	'<p>This is a modal default call. <a href="#" class="mgExternal-close">Close</a></p>'
 	+ '<p class="faded">You can press ESC or click outside to close this window.</p>', {
-	dataCss: {
+	css: {
 		padding: 30
 	}
 });
@@ -62,7 +65,7 @@ $('#test-default-tooltip').mgExternal(
 	+ '<p class="info"><strong>Hint:</strong> try to resize the window.</p>'
 	+ '<p class="faded">You can press ESC or click outside to close this window.</p>', {
 	display: 'tooltip',
-	dataCss: {
+	css: {
 		padding: 15
 	}
 });
@@ -71,6 +74,16 @@ $('#test-options-menu').mgExternal({
 	display: 'tooltip',
 	extraClass: 'mgE-tooltip mgE-options',
 	ajaxUrl: 'test_ajax_options.html',
+	tooltip: {
+		arrowSize: 0,
+		position: 'bottom left'
+	}
+});
+
+$('#test-options-menu-long').mgExternal({
+	display: 'tooltip',
+	extraClass: 'mgE-tooltip mgE-options',
+	ajaxUrl: 'test_ajax_options_long.html',
 	tooltip: {
 		arrowSize: 0,
 		position: 'bottom left'
@@ -90,10 +103,10 @@ $('#test-tooltip-overlay').mgExternal(
 	+ '<a class="btn secondary mgExternal-close" href="#">Close</a>'
 	+ '</div>', {
 	display: 'tooltip',
-	overlayOpacity: 0.7,
+	overlayShow: true,
 	outsideClose: false,
 	escClose: false,
-	dataCss: {
+	css: {
 		backgroundColor: '#f5f5f5'
 	},
 	tooltip: {

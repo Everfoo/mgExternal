@@ -1,11 +1,19 @@
 /**
- * mgExternal 1.0.20
+ * mgExternal 1.0.21
  *
  * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
+ *
+ * TODO:
+ *   - Modal scrollable (facebook-style)
+ *   - Infinite linked tooltips
+ *   - Solve inline functionality
+ *   - Test callbacks
  */
 
 (function($, undefined){
+
+//---[ jQuery plugin ]--------------------------------------------------------//
 
 $.fn.mgExternal = function(defaultContent, options) {
 	return this.each(function(){
@@ -13,13 +21,15 @@ $.fn.mgExternal = function(defaultContent, options) {
 	});
 };
 
+//---[ mgExternal constructor ]-----------------------------------------------//
+
 window.mgExternal = function(trigger, defaultContent, options) {
 
 	if (!(this instanceof mgExternal))
 		return new mgExternal(trigger, defaultContent, options);
 
 	// trigger is optional when used only once. Eg: mgExternal("Hi!");
-	if (trigger.tagName === undefined) {
+	if (!trigger || trigger.tagName === undefined) {
 		options = defaultContent;
 		defaultContent = trigger;
 		trigger = null;
@@ -37,7 +47,6 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 		// Core
 		display: 'modal', // modal, tooltip or inline
-		content: (options && options.display == 'inline') ? $(trigger) : $('<div/>'),
 		auto: !trigger, // Auto-open, default false if a trigger exists
 		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
@@ -46,22 +55,29 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		destroyOnClose: !trigger, // Destroy all generated elements and remove bindings
 
 		// Appearance
-		dataCss: {}, // Custom data CSS
+		css: {}, // Custom CSS
 		extraClass: (options && options.display) ? (options.display != 'inline' ? 'mgE-'+options.display : null) : 'mgE-modal',
+		activeClass: 'active',
 		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Show delay in ms
 		hideDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Hide delay in ms
 		showSpeed: 300,
 		hideSpeed: 300,
+		overlayShow: (!options || !options.display || options.display == 'modal') ? true : false,
 		overlayColor: '#fff',
-		overlayOpacity: (!options || !options.display || options.display == 'modal') ? 0.7 : 0, // Opacity from 0 to 1
+		overlayOpacity: 0.7, // Opacity from 0 to 1
+		overlayShowSpeed: 300,
+		overlayHideSpeed: 300,
 		submitIdentifier: 'input[type="submit"]',
 		focusPriority: [
 			':not(:radio):input:visible:enabled:first'
 		],
+		zIndexContainer: 999,
+		zIndexTooltipTrigger: 998,
+		zIndexOverlay: 997,
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
-		ajaxData: {},
+		ajaxData: {}, // Additional arguments to be sent
 
 		// Modal settings
 		modal: {
@@ -77,19 +93,18 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			arrowSize: 8, // Arrow size in pixels
 			arrowDistance: 15,
 			arrowFrontColor: null, // Default front color is set in the CSS file,
-			arrowBorderColor: null, // Default border color is set in the CSS file,
-			activeClass: 'active'
+			arrowBorderColor: null // Default border color is set in the CSS file
 		},
 
 		// Callbacks
 		onCreateElements: function(){},
-		onBeforeShow: function(){}, // returning false prevents opening
-		onShow: function(){},
-		onBeforeClose: function(){}, // returning false prevents closing
-		onClose: function(){},
-		onDestroy: function(){},
-		onContentReady: function(){},
-		onJsonData: function(data){}
+		onBeforeShow:     function(){}, // returning false prevents opening
+		onShow:           function(){},
+		onBeforeClose:    function(){}, // returning false prevents closing
+		onClose:          function(){},
+		onDestroy:        function(){},
+		onContentReady:   function(){},
+		onJsonData:       function(data){}
 	};
 
 	// data-mg-external HTML attributes are a valid alternate method of
@@ -99,8 +114,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	// Internal jQuery elements
 	this.$trigger = $(trigger);
 	this.$container = null;
-	this.$data = null;
-	this.$content = this.settings.content;
+	this.$content = options.display == 'inline' ? this.$trigger : null;
 	this.$tooltipArrow = null;
 
 	// Private vars
@@ -161,6 +175,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		this.open();
 };
 
+//---[ mgExternal prototype ]-------------------------------------------------//
+
 mgExternal.prototype = {
 
 	defaults: {},
@@ -176,7 +192,7 @@ mgExternal.prototype = {
 	open: function(delay) {
 		var self = this;
 		this._show = true;
-		delay ? setTimeout(function(){self._open()}, delay) : self._open(); // Using a delay value of `0` would still
+		delay ? setTimeout(function(){self._open()}, delay) : this._open(); // Using a delay value of `0` would still
 		                                                                    // create a noticeable visual effect
 	},
 
@@ -187,7 +203,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		this.$trigger.addClass(this.settings.tooltip.activeClass);
+		this.$trigger.addClass(this.settings.activeClass);
 
 		// New content
 		if (this.settings.renew || !this.$container) {
@@ -216,24 +232,17 @@ mgExternal.prototype = {
 	close: function(delay) {
 		var self = this;
 		this._show = false;
-		delay ? setTimeout(function(){self._close()}, delay) : self._close();
+		delay ? setTimeout(function(){self._close()}, delay) : this._close();
 	},
 
 	_close: function() {
 
-		if (this._show || !this.isVisible() || this.settings.onBeforeClose.call(this) === false || this.settings.display == 'inline')
+		if (this._show || this.settings.display == 'inline' || !this.isVisible() || this.settings.onBeforeClose.call(this) === false)
 			return;
 
 		var self = this;
 
-		this.$trigger.removeClass(this.settings.tooltip.activeClass);
-
-		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
-			this.$trigger.css({
-				position: this._triggerZIndexBackup.position,
-				zIndex: this._triggerZIndexBackup.zIndex
-			});
-		}
+		this.$trigger.removeClass(this.settings.activeClass);
 
 		// Fade container out
 		this.$container.fadeOut(this.settings.hideSpeed, function(){
@@ -243,8 +252,10 @@ mgExternal.prototype = {
 			if (self.settings.destroyOnClose)
 				self.destroy();
 
-			if (self.settings.overlayOpacity > 0 && self.settings.display == 'modal') {
-				$('#mgExternal-overlay').fadeOut(self.settings.hideSpeed, function(){
+			if (self.settings.display == 'modal' && self.settings.overlayShow) {
+				$('#mgExternal-overlay').fadeOut(self.settings.overlayHideSpeed, function(){
+					//$('html,body').css('overflow', '');
+					//$('body').css('margin-right', '');
 					self.settings.onClose.call(self);
 				});
 			} else {
@@ -252,9 +263,14 @@ mgExternal.prototype = {
 			}
 		});
 
-		if (this.settings.overlayOpacity > 0 && this.settings.display != 'modal')
-			$('#mgExternal-overlay').fadeOut(this.settings.hideSpeed);
-
+		if (this.settings.display == 'tooltip' && this.settings.overlayShow) {
+			$('#mgExternal-overlay').fadeOut(this.settings.overlayHideSpeed, function(){
+				self.$trigger.css({
+					position: self._triggerZIndexBackup.position,
+					zIndex: self._triggerZIndexBackup.zIndex
+				});
+			});
+		}
 	},
 
 	setContent: function(html) {
@@ -266,7 +282,7 @@ mgExternal.prototype = {
 
 		// We remove the margin for the first DIV element due to aesthetical
 		// reasons. If you wish to maintain those proportions, you should set
-		// the equivalent padding in settings.dataCss
+		// the equivalent padding in settings.css
 		this.$content
 			.html(html)
 			.children()
@@ -284,8 +300,8 @@ mgExternal.prototype = {
 			this.$container.css('visibility', 'hidden').show();
 
 		this.bindSpecialActions();
-		this.settings.onContentReady.call(this);
 		this.setFocus();
+		this.settings.onContentReady.call(this);
 
 		if (this.settings.display != 'inline') {
 			if (this.isVisible()) {
@@ -304,14 +320,14 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		if (this.settings.display == 'tooltip' && this.settings.overlayOpacity > 0) {
+		if (this.settings.display == 'tooltip' && this.settings.overlayShow) {
 			this._triggerZIndexBackup = {
 				position: this.$trigger.css('position') == 'static' ? '' : this.$trigger.css('position'),
 				zIndex: this.$trigger.css('z-index') == 0 ? '' : this.$trigger.css('z-index')
 			};
 			this.$trigger.css({
 				position: this._triggerZIndexBackup.position ? null : 'relative',
-				zIndex: 998
+				zIndex: this.settings.zIndexTooltipTrigger
 			});
 		}
 
@@ -319,11 +335,12 @@ mgExternal.prototype = {
 		// overlay in before
 		var fadeInContainer = function(){
 			self.$container.fadeIn(self.settings.showSpeed, function(){
-				self.settings.onShow.call(self);
 				self.setFocus();
+				self.settings.onShow.call(self);
 			});
 		};
-		if (this.settings.overlayOpacity > 0) {
+		if (this.settings.overlayShow) {
+
 			var $overlay = $('#mgExternal-overlay');
 			$overlay.css({
 				background: this.settings.overlayColor,
@@ -331,9 +348,11 @@ mgExternal.prototype = {
 			});
 
 			if (this.settings.display == 'modal') {
-				$overlay.fadeIn(this.settings.showSpeed, fadeInContainer);
+				//$('html,body').css('overflow', 'hidden');
+				//$('body').css('margin-right', this._browserScrollbarWidth);
+				$overlay.fadeIn(this.settings.overlayShowSpeed, fadeInContainer);
 			} else {
-				$overlay.fadeIn(this.settings.showSpeed);
+				$overlay.fadeIn(this.settings.overlayShowSpeed);
 				fadeInContainer();
 			}
 		} else {
@@ -347,7 +366,6 @@ mgExternal.prototype = {
 		});
 	},
 
-	// TODO: remove bindings
 	destroy: function() {
 		this.$container.remove();
 		this.settings.onDestroy.call(this);
@@ -447,7 +465,8 @@ mgExternal.prototype = {
 			});
 		}
 
-		this.$content.find(':input').prop('disabled', true).addClass('disabled');
+		if (this.$content)
+			this.$content.find(':input').prop('disabled', true).addClass('disabled');
 	},
 
 	setFocus: function() {
@@ -465,7 +484,7 @@ mgExternal.prototype = {
 
 		for (var i = 0, firstInput = form.find(this.settings.focusPriority[i]);
 		     firstInput.length == 0 && i <= this.settings.focusPriority.length;
-		     firstInput = form.find(this.settings.focusPriority[++i]));
+		     firstInput = form.find(this.settings.focusPriority[++i])){}
 
 		setTimeout(function(){
 			firstInput.trigger('focus');
@@ -482,21 +501,20 @@ mgExternal.prototype = {
 				.addClass(this.settings.extraClass)
 				.css({
 					position: 'absolute',
-					zIndex: 999
+					zIndex: this.settings.zIndexContainer
 				})
 				.hide()
 				.appendTo('body')
 				.bind('mouseup', function(e){
 					e.stopPropagation(); // Required if outsideClose is set to true.
-										 // mouseup event is used instead of click
-										 // due to IE incompatibility
+					                     // mouseup event is used instead of click
+					                     // due to IE incompatibility
 				});
 
-			this.$data = $('<div/>')
-				.addClass('mgExternal-data')
-				.css(this.settings.dataCss)
-				.appendTo(this.$container)
-				.append(this.$content);
+			this.$content = $('<div/>')
+				.addClass('mgExternal-content')
+				.css(this.settings.css)
+				.appendTo(this.$container);
 
 			if (this.settings.tooltip.bind == 'hover') {
 				this.$container.bind('mouseenter', function(){self.open(self.settings.showDelay)});
@@ -509,7 +527,7 @@ mgExternal.prototype = {
 			if (this.settings.display == 'tooltip')
 				$(window).bind('scroll', function(){self.moveContainer()});
 
-			// Hide on outside click or ESC
+			// Hide on outside click
 			if (this.settings.outsideClose) {
 
 				// Using mouseup event due to IE incompatibility. Also using
@@ -521,6 +539,7 @@ mgExternal.prototype = {
 				});
 			}
 
+			// Hide on ESC press
 			if (this.settings.escClose) {
 				$(document).bind('keyup', function(e){
 					if (e.keyCode == 27)
@@ -531,7 +550,7 @@ mgExternal.prototype = {
 			self.settings.onCreateElements.call(self);
 		}
 
-		if (this.settings.overlayOpacity > 0 && $('#mgExternal-overlay').length == 0) {
+		if (this.settings.overlayShow && $('#mgExternal-overlay').length == 0) {
 			this.$modalOverlay = $('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
@@ -540,7 +559,7 @@ mgExternal.prototype = {
 					position: 'fixed',
 					top: 0,
 					width: '100%', // 100% doesn't work properly on touchscreens
-					zIndex: 997
+					zIndex: this.settings.zIndexOverlay
 				})
 				.hide()
 				.appendTo('body');
@@ -564,7 +583,7 @@ mgExternal.prototype = {
 				.append($('<div/>')
 					.addClass('mgExternal-arrow-front')
 					.css({
-						borderColor: this.settings.tooltip.arrowFrontColor || this.$data.css('backgroundColor'),
+						borderColor: this.settings.tooltip.arrowFrontColor || this.$content.css('backgroundColor'),
 						borderStyle: 'solid',
 						position: 'absolute',
 						borderWidth: this.settings.tooltip.arrowSize
@@ -591,17 +610,18 @@ mgExternal.prototype = {
 	moveModal: function() {
 		var top = 0,
 		    left = 0,
+		    breatheSeparation = 15,
 		    containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true);
 
 		if (containerHeight < $(window).height())
-			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2) - 15;
-		if (top < ($(document).scrollTop() + 15))
-			top = $(document).scrollTop() + 15;
+			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2) - breatheSeparation;
+		if (top < ($(document).scrollTop() + breatheSeparation))
+			top = $(document).scrollTop() + breatheSeparation;
 
 		left = ($(window).width() - containerWidth) / 2;
-		if (left < 15)
-			left = 15;
+		if (left < breatheSeparation)
+			left = breatheSeparation;
 
 		if (this.settings.modal.animateSpeed > 0)
 			this.$container.stop().animate({top: top, left: left, opacity: 1}, this.settings.modal.animateSpeed);
@@ -630,9 +650,9 @@ mgExternal.prototype = {
 				.end()
 			.appendTo('body');
 
-		this.$data
-			.css('height', this.settings.dataCss.height || '').css('height', $tempContainer.children().height())
-			.css('width', this.settings.dataCss.width || '').css('width',  $tempContainer.children().width());
+		this.$content
+			.css('height', this.settings.css.height || '').css('height', $tempContainer.children().height())
+			.css('width', this.settings.css.width || '').css('width',  $tempContainer.children().width());
 
 		$tempContainer.remove();
 
@@ -799,7 +819,7 @@ mgExternal.prototype = {
 					borderTopWidth: position == 'bottom' ? 0 : arrowSize
 				}).filter('.mgExternal-arrow-front').css({
 					left: 0,
-					top: (position == 'top' ? '-' : '')+this.$data.css('borderBottomWidth')
+					top: (position == 'top' ? '-' : '')+this.$content.css('borderBottomWidth')
 				});
 			} else {
 				this.$tooltipArrow.css({
@@ -816,7 +836,7 @@ mgExternal.prototype = {
 					borderLeftWidth: position == 'right' ? 0 : arrowSize,
 					borderRightWidth: position == 'left' ? 0 : arrowSize
 				}).filter('.mgExternal-arrow-front').css({
-					left: (position == 'left' ? '-' : '')+this.$data.css('borderBottomWidth'),
+					left: (position == 'left' ? '-' : '')+this.$content.css('borderBottomWidth'),
 					top: 0
 				});
 			}
@@ -828,4 +848,17 @@ mgExternal.prototype = {
 	}
 };
 
-})(jQuery);
+//---[ Browser scrollbar width ]----------------------------------------------//
+
+$(function(){
+	var $testDiv = $('<div/>')
+		.css({height: 100, overflow: 'hidden', position: 'absolute', width: 100})
+		.append($('<div/>').css('height', '100%'))
+		.appendTo('body');
+
+	window.mgExternal.prototype._browserScrollbarWidth = $testDiv.find('> div').width()
+	                                                   - $testDiv.css('overflow-y', 'scroll').find('> div').width();
+	$testDiv.remove();
+});
+
+})(jQuery, window);
