@@ -114,7 +114,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	// Internal jQuery elements
 	this.$trigger = $(trigger);
 	this.$container = null;
-	this.$content = options.display == 'inline' ? this.$trigger : null;
+	this.$content = (options && options.display == 'inline') ? this.$trigger : null;
 	this.$tooltipArrow = null;
 
 	// Private vars
