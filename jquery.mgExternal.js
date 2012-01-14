@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.21
+ * mgExternal 1.0.22
  *
  * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
@@ -74,6 +74,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		zIndexContainer: 999,
 		zIndexTooltipTrigger: 998,
 		zIndexOverlay: 997,
+		breatheSeparation: (options && options.display == 'tooltip') ? 15 : 40,
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
@@ -254,8 +255,9 @@ mgExternal.prototype = {
 
 			if (self.settings.display == 'modal' && self.settings.overlayShow) {
 				$('#mgExternal-overlay').fadeOut(self.settings.overlayHideSpeed, function(){
-					//$('html,body').css('overflow', '');
-					//$('body').css('margin-right', '');
+					self.$container.parent().hide();
+					$('html,body').css('overflow', '');
+					$('body').css('margin-right', '');
 					self.settings.onClose.call(self);
 				});
 			} else {
@@ -296,8 +298,11 @@ mgExternal.prototype = {
 				.last()
 					.css('margin-bottom', '0');
 
-		if (!this.isVisible())
+		if (!this.isVisible()) {
+			if (this.settings.display == 'modal' && this.settings.overlayShow)
+				this.$container.parent().css('visibility', 'hidden').show();
 			this.$container.css('visibility', 'hidden').show();
+		}
 
 		this.bindSpecialActions();
 		this.setFocus();
@@ -307,6 +312,8 @@ mgExternal.prototype = {
 			if (this.isVisible()) {
 				this.moveContainer();
 			} else {
+				if (this.settings.display == 'modal' && this.settings.overlayShow)
+					this.$container.parent().hide().css('visibility', 'visible');
 				this.$container.hide().css('visibility', 'visible');
 				this.showContainer();
 			}
@@ -334,6 +341,12 @@ mgExternal.prototype = {
 		// Fade container in, and call onShow. If it's a modal, fade
 		// overlay in before
 		var fadeInContainer = function(){
+			if (self.settings.display == 'modal' && self.settings.overlayShow)
+				self.$container.parent().show();
+			self.moveContainer(true, true);
+			self.$container.find('img').bind('load', function(){
+				self.moveContainer(true);
+			});
 			self.$container.fadeIn(self.settings.showSpeed, function(){
 				self.setFocus();
 				self.settings.onShow.call(self);
@@ -348,8 +361,8 @@ mgExternal.prototype = {
 			});
 
 			if (this.settings.display == 'modal') {
-				//$('html,body').css('overflow', 'hidden');
-				//$('body').css('margin-right', this._browserScrollbarWidth);
+				$('html,body').css('overflow', 'hidden');
+				$('body').css('margin-right', this._browserScrollbarWidth);
 				$overlay.fadeIn(this.settings.overlayShowSpeed, fadeInContainer);
 			} else {
 				$overlay.fadeIn(this.settings.overlayShowSpeed);
@@ -358,16 +371,14 @@ mgExternal.prototype = {
 		} else {
 			fadeInContainer();
 		}
-
-		// Reposition the container
-		this.moveContainer(true);
-		this.$container.find('img').bind('load', function(){
-			self.moveContainer(true);
-		});
 	},
 
 	destroy: function() {
-		this.$container.remove();
+		if (this.settings.display == 'modal' && this.settings.overlayShow) {
+			this.$container.parent().remove();
+		} else {
+			this.$container.remove()
+		}
 		this.settings.onDestroy.call(this);
 	},
 
@@ -504,7 +515,19 @@ mgExternal.prototype = {
 					zIndex: this.settings.zIndexContainer
 				})
 				.hide()
-				.appendTo('body')
+				.appendTo(this.settings.display == 'modal' && this.settings.overlayShow
+					? $('<div/>')
+						.css({
+							height: '100%',
+							left: 0,
+							overflowY: 'scroll',
+							position: 'fixed',
+							top: 0,
+							width: '100%',
+							zIndex: this.settings.zIndexContainer
+						})
+						.appendTo('body')
+					: 'body')
 				.bind('mouseup', function(e){
 					e.stopPropagation(); // Required if outsideClose is set to true.
 					                     // mouseup event is used instead of click
@@ -534,8 +557,11 @@ mgExternal.prototype = {
 				// body instead of document as clicking on the sidebar would
 				// trigger the event.
 				$('body').bind('mouseup', function(e){
-					if (e.which == 1)
-						self.close();
+					if (e.which == 1) {
+						// Workaround for Firefox as it fires mouseup events when clicking on the scrollbar
+						if (!e.originalEvent.originalTarget || !(e.originalEvent.originalTarget instanceof XULElement))
+							self.close();
+					}
 				});
 			}
 
@@ -551,7 +577,7 @@ mgExternal.prototype = {
 		}
 
 		if (this.settings.overlayShow && $('#mgExternal-overlay').length == 0) {
-			this.$modalOverlay = $('<div/>')
+			$('<div/>')
 				.attr('id', 'mgExternal-overlay')
 				.css({
 					height: '100%', // 100% doesn't work properly on touchscreens
@@ -592,14 +618,14 @@ mgExternal.prototype = {
 		}
 	},
 
-	moveContainer: function(force) {
+	moveContainer: function(force, instant) {
 
 		if (!force && !this.isVisible())
 			return;
 
 		switch (this.settings.display) {
 			case 'modal':
-				this.moveModal();
+				this.moveModal(instant);
 				break;
 			case 'tooltip':
 				this.moveTooltip();
@@ -607,23 +633,29 @@ mgExternal.prototype = {
 		}
 	},
 
-	moveModal: function() {
+	moveModal: function(instant) {
 		var top = 0,
 		    left = 0,
-		    breatheSeparation = 15,
-		    containerHeight = this.$container.outerHeight(true),
+		    breatheSeparation = this.settings.breatheSeparation;
+
+		this.$container.css('padding', breatheSeparation);
+
+		var containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true);
 
+		if (this.settings.overlayShow)
+			containerWidth += this._browserScrollbarWidth;
+
 		if (containerHeight < $(window).height())
-			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2) - breatheSeparation;
-		if (top < ($(document).scrollTop() + breatheSeparation))
-			top = $(document).scrollTop() + breatheSeparation;
+			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2);
+		if (top < $(document).scrollTop())
+			top = $(document).scrollTop();
 
 		left = ($(window).width() - containerWidth) / 2;
-		if (left < breatheSeparation)
-			left = breatheSeparation;
+		if (left < 0)
+			left = 0;
 
-		if (this.settings.modal.animateSpeed > 0)
+		if (this.settings.modal.animateSpeed > 0 && !instant)
 			this.$container.stop().animate({top: top, left: left, opacity: 1}, this.settings.modal.animateSpeed);
 		else
 			this.$container.css({top: top, left: left, opacity: 1});
@@ -648,6 +680,7 @@ mgExternal.prototype = {
 					width: ''
 				})
 				.end()
+			.show()
 			.appendTo('body');
 
 		this.$content
@@ -659,7 +692,7 @@ mgExternal.prototype = {
 		//---[ Useful vars ]--------------------------------------------------//
 
 		var pos = {top: 0, left: 0},
-		    breatheSeparation = 15,
+		    breatheSeparation = this.settings.breatheSeparation,
 		    windowHeight = $(window).height(),
 		    windowWidth = $(window).width(),
 		    containerHeight = this.$container.outerHeight(true),
