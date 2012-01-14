@@ -13,6 +13,11 @@
 
 (function($, undefined){
 
+//---[ normalize.css fix ]----------------------------------------------------//
+
+$('html').css('overflowY', 'visible');
+$('body').css('overflowY', 'scroll');
+
 //---[ jQuery plugin ]--------------------------------------------------------//
 
 $.fn.mgExternal = function(defaultContent, options) {
@@ -74,7 +79,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		zIndexContainer: 999,
 		zIndexTooltipTrigger: 998,
 		zIndexOverlay: 997,
-		breatheSeparation: (options && options.display == 'tooltip') ? 15 : 40,
+		breatheSeparation: (options && options.display == 'tooltip') ? 15 : 30,
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
@@ -256,8 +261,10 @@ mgExternal.prototype = {
 			if (self.settings.display == 'modal' && self.settings.overlayShow) {
 				$('#mgExternal-overlay').fadeOut(self.settings.overlayHideSpeed, function(){
 					self.$container.parent().hide();
-					$('html,body').css('overflow', '');
-					$('body').css('margin-right', '');
+					$('body').css({
+						marginRight: '',
+						overflow: ''
+					});
 					self.settings.onClose.call(self);
 				});
 			} else {
@@ -361,8 +368,10 @@ mgExternal.prototype = {
 			});
 
 			if (this.settings.display == 'modal') {
-				$('html,body').css('overflow', 'hidden');
-				$('body').css('margin-right', this._browserScrollbarWidth);
+				$('body').css({
+					marginRight: this._browserScrollbarWidth,
+					overflow: 'hidden'
+				});
 				$overlay.fadeIn(this.settings.overlayShowSpeed, fadeInContainer);
 			} else {
 				$overlay.fadeIn(this.settings.overlayShowSpeed);
@@ -638,20 +647,23 @@ mgExternal.prototype = {
 		    left = 0,
 		    breatheSeparation = this.settings.breatheSeparation;
 
-		this.$container.css('padding', breatheSeparation);
+		this.$container.css('padding', breatheSeparation+'px 0 '+(breatheSeparation*2)+'px');
 
 		var containerHeight = this.$container.outerHeight(true),
-		    containerWidth = this.$container.outerWidth(true);
+		    containerWidth = this.$container.outerWidth(true),
+		    wrapperHeight = $(window).height(),
+		    wrapperWidth = $(window).width(),
+		    scrollTop = this.settings.overlayShow ? 0 : $(document).scrollTop();
 
 		if (this.settings.overlayShow)
 			containerWidth += this._browserScrollbarWidth;
 
-		if (containerHeight < $(window).height())
-			top = $(document).scrollTop() + (($(window).height() - containerHeight) / 2);
-		if (top < $(document).scrollTop())
-			top = $(document).scrollTop();
+		if (containerHeight < wrapperHeight)
+			top = scrollTop + ((wrapperHeight - containerHeight) / 2);
+		if (top < scrollTop)
+			top = scrollTop;
 
-		left = ($(window).width() - containerWidth) / 2;
+		left = (wrapperWidth - containerWidth) / 2;
 		if (left < 0)
 			left = 0;
 
