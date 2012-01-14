@@ -5,7 +5,6 @@
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
  * TODO:
- *   - Modal scrollable (facebook-style)
  *   - Infinite linked tooltips
  *   - Solve inline functionality
  *   - Test callbacks
