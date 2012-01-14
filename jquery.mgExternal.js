@@ -669,7 +669,7 @@ mgExternal.prototype = {
 		if (this.settings.modal.animateSpeed > 0 && !instant)
 			this.$container.stop().animate({top: top, left: left, opacity: 1}, this.settings.modal.animateSpeed);
 		else
-			this.$container.css({top: top, left: left, opacity: 1});
+			this.$container.stop().css({top: top, left: left, opacity: 1});
 	},
 
 	moveTooltip: function() {

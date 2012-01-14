@@ -50,6 +50,8 @@
 	<p><a class="btn" id="test-options-menu">Open options menu</a> <a class="btn" id="test-options-menu-long" style="margin-left:5px;">Open options long menu</a></p>
 	<h4>Tooltip with overlay</h4>
 	<p><a class="btn" id="test-tooltip-overlay">Open tooltip with overlay</a></p>
+	<h4>Onload</h4>
+	<p><a class="btn" id="test-onload">Open onload example</a></p>
 </div>
 
 <script>
@@ -156,6 +158,13 @@ $('#test-tooltip-overlay').mgExternal(
 	},
 	tooltip: {
 		position: 'right bottom'
+	}
+});
+
+$('#test-onload').mgExternal({
+	ajaxUrl: 'test_ajax_onload.html',
+	css: {
+		padding: 30
 	}
 });
 

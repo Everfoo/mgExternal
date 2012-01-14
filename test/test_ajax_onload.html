@@ -1,0 +1,13 @@
+<div class="mgExternal-onLoad" id="onload-test"></div>
+
+<p><a class="btn" id="onload-test-button">Set new content</a></p>
+
+<script>
+$('#onload-test').data('mgExternal-onLoad', function(){
+	var self = this;
+	$('#onload-test-button').click(function(){
+		self.setContent("This text has been set using the onLoad special action. <a href='#' class='mgExternal-close'>Close</a>");
+		self.moveContainer(true, true);
+	});
+});
+</script>
