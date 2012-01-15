@@ -8,7 +8,6 @@
  *   - Infinite linked tooltips
  *   - Solve inline functionality
  *   - Test callbacks
- *   - Fix hover renew
  */
 
 (function($, undefined){
@@ -53,7 +52,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		// Core
 		display: 'modal', // modal, tooltip or inline
 		auto: !trigger, // Auto-open, default false if a trigger exists
-		renew: (options && options.tooltip && options.tooltip.bind == 'hover') ? false : true, // Should each call fetch new data
+		renew: true, // Should each call fetch new data
 		autoFocus: true, // Auto-focus first input element
 		outsideClose: true, // Hide container when an outside click occurs
 		escClose: true, // Hide container when the ESC key is pressed
@@ -213,7 +212,7 @@ mgExternal.prototype = {
 		this.$trigger.addClass(this.settings.loadingClass);
 
 		// New content
-		if (this.settings.renew || !this.$container) {
+		if (!this.isVisible() && (this.settings.renew || !this.$container)) {
 			this.settings.ajaxUrl = this._defaultAjaxUrl;
 			this._lastSubmitName = null;
 
