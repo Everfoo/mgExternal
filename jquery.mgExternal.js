@@ -8,6 +8,7 @@
  *   - Infinite linked tooltips
  *   - Solve inline functionality
  *   - Test callbacks
+ *   - Fix hover renew
  */
 
 (function($, undefined){
@@ -62,6 +63,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		css: {}, // Custom CSS
 		extraClass: (options && options.display) ? (options.display != 'inline' ? 'mgE-'+options.display : null) : 'mgE-modal',
 		activeClass: 'active',
+		loadingClass: 'loading',
 		showDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Show delay in ms
 		hideDelay: (options && options.display == 'tooltip' && options.tooltip && options.tooltip.bind == 'hover') ? 200 : 0, // Hide delay in ms
 		showSpeed: 300,
@@ -208,7 +210,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		this.$trigger.addClass(this.settings.activeClass);
+		this.$trigger.addClass(this.settings.loadingClass);
 
 		// New content
 		if (this.settings.renew || !this.$container) {
@@ -247,7 +249,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		this.$trigger.removeClass(this.settings.activeClass);
+		this.$trigger.removeClass(this.settings.loadingClass).removeClass(this.settings.activeClass);
 
 		// Fade container out
 		this.$container.fadeOut(this.settings.hideSpeed, function(){
@@ -332,6 +334,8 @@ mgExternal.prototype = {
 			return;
 
 		var self = this;
+
+		this.$trigger.removeClass(this.settings.loadingClass).addClass(this.settings.activeClass);
 
 		if (this.settings.display == 'tooltip' && this.settings.overlayShow) {
 			this._triggerZIndexBackup = {
