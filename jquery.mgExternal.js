@@ -260,12 +260,12 @@ mgExternal.prototype = {
 				self.destroy();
 
 			if (self.settings.display == 'modal' && self.settings.overlayShow) {
+				self.$container.parent().hide();
+				$('body').css({
+					marginRight: '',
+					overflow: ''
+				});
 				$('#mgExternal-overlay').fadeOut(self.settings.overlayHideSpeed, function(){
-					self.$container.parent().hide();
-					$('body').css({
-						marginRight: '',
-						overflow: ''
-					});
 					self.settings.onClose.call(self);
 				});
 			} else {
