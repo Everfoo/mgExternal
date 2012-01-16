@@ -209,8 +209,6 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		this.$trigger.addClass(this.settings.loadingClass);
-
 		// New content
 		if (!this.isVisible() && (this.settings.renew || !this.$container)) {
 			this.settings.ajaxUrl = this._defaultAjaxUrl;
@@ -334,7 +332,7 @@ mgExternal.prototype = {
 
 		var self = this;
 
-		this.$trigger.removeClass(this.settings.loadingClass).addClass(this.settings.activeClass);
+		this.$trigger.addClass(this.settings.activeClass);
 
 		if (this.settings.display == 'tooltip' && this.settings.overlayShow) {
 			this._triggerZIndexBackup = {
@@ -417,6 +415,8 @@ mgExternal.prototype = {
 		var self = this,
 			ajaxData = $.extend({}, self.settings.ajaxData);
 
+		this.$trigger.addClass(this.settings.loadingClass);
+
 		if (submit) {
 			this._lastSubmitName = submit.find(this.settings.submitIdentifier).val();
 			submit.find(':input').each(function(){
@@ -441,6 +441,8 @@ mgExternal.prototype = {
 			$('<iframe name="'+iframeName+'" id="'+iframeName+'" src="" style="display:none;"></iframe>')
 				.appendTo('body')
 				.bind('load', function(){
+					self.$trigger.removeClass(self.settings.loadingClass);
+
 					var response = $(this).contents().find('body').html();
 					// Is it a JSON object?
 					try {
@@ -475,6 +477,8 @@ mgExternal.prototype = {
 				type: submit ? 'POST' : 'GET',
 				data: ajaxData,
 				success: function(data){
+					self.$trigger.removeClass(self.settings.loadingClass);
+
 					if (typeof data == 'object') {
 						self.settings.onJsonData.call(self, data);
 					} else {
@@ -482,6 +486,8 @@ mgExternal.prototype = {
 					}
 				},
 				error: function(jqXHR, textStatus, errorThrown){
+					self.$trigger.removeClass(self.settings.loadingClass);
+
 					self.setContent('<div class="notice alert">S\'ha produït un error</div>');
 				}
 			});
