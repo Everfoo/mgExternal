@@ -1,0 +1,92 @@
+/*** mgExternal ***/
+
+/*
+ * normalize.css forces the HTML tag to have a scrollbar. In onjunction with
+ * mgExternal's modal scrolling, it makes the page jump at the top everytime
+ * a modal window is opened. With this fix we leave the HTML tag alone and set
+ * the exact same property but in the BODY tag (which works as expected).
+ */
+
+html { overflow-y: visible !important; }
+body { overflow-y: scroll; }
+
+/* Style: default modal */
+.mgE-modal .mgExternal-content {
+	background-color: #fff;
+	border: 1px solid #999;
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+	        border-radius: 2px;
+	-webkit-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	   -moz-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	overflow: auto;
+}
+
+/* Style: default tooltip */
+.mgE-tooltip .mgExternal-content {
+	background-color: #fff;
+	border: 1px solid #999;
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+	        border-radius: 2px;
+	-webkit-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+	   -moz-box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+	        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mgE-tooltip .mgExternal-arrow-shadow {
+	border-color: #888;
+}
+
+/* Style: tipsy */
+.mgE-tipsy .mgExternal-content {
+	background-color: #333;
+	border: 0; /* `none` returns `medium` as width in IE, but we expect a number */
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+	-webkit-box-shadow: none;
+	   -moz-box-shadow: none;
+	        box-shadow: none;
+	color: #fff;
+	font-size: 11px;
+	padding: 8px 10px;
+}
+
+/* Style: options menu */
+
+.mgE-options .mgExternal-content {
+	margin: -1px 0;
+	max-height: 360px;
+	min-width: 130px;
+	overflow: auto;
+	padding: 6px 0;
+}
+
+.mgE-options ul {
+	margin: 0;
+}
+
+.mgE-options ul + ul {
+	border-top: 1px solid #eee;
+	margin-top: 8px;
+	padding-top: 8px;
+}
+
+.mgE-options li {
+	list-style: none;
+}
+
+.mgE-options a {
+	color: #333;
+	display: block;
+	padding: 2px 30px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.mgE-options a:hover,
+.mgE-options li.selected a {
+	background-color: #eee;
+}
