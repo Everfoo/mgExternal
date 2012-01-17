@@ -1,85 +1,174 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset='utf-8'>
-
-  <title>celtric/mgExternal @ GitHub</title>
-
-  <style type="text/css">
-    body {
-      margin-top: 1.0em;
-      background-color: #1e8b5e;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #ffffff;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-    h1 { font-size: 3.8em; color: #e174a1; margin-bottom: 3px; }
-    h1 .small { font-size: 0.4em; }
-    h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #e174a1; }
-    h3 { text-align: center; color: #e174a1; }
-    a { color: #e174a1; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-  </style>
+	<title>mgExternal Test file</title>
+	<meta charset="utf-8" />
+	<link rel="stylesheet" href="//twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+	<link rel="stylesheet" href="//raw.github.com/celtric/mgExternal/master/mgExternal.css">
+	<style>
+		body {
+			background-color: #eee;
+		}
+		#base {
+			background-color: #fff;
+			height: 3000px;
+			margin: 50px auto;
+			padding: 30px;
+			width: 500px;
+		}
+		.faded {
+			color: #999;
+		}
+		.info {
+			color: #484;
+		}
+		.alert {
+			color: #c00;
+		}
+	</style>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script src="//raw.github.com/celtric/mgExternal/master/jquery.mgExternal.js"></script>
 </head>
-
 <body>
-  <a href="https://github.com/celtric/mgExternal"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
-  <div id="container">
+<div id="base">
+	<h1><a href="https://github.com/celtric/mgExternal">mgExternal</a> Test file</h1>
+	<hr />
+	<p>This is a test file.</p>
+	<h4>Default modal</h4>
+	<p>
+		<a class="btn" id="test-default-modal">Open modal</a>
+		<a class="btn" id="test-default-modal-long" style="margin-left:5px;">Open long modal</a>
+	</p>
+	<p>
+		<a class="btn" id="test-default-modal-nooverlay">Open modal without overlay</a>
+		<a class="btn" id="test-default-modal-nooverlay-long" style="margin-left:5px;">Open long modal without overlay</a>
+	</p>
+	<h4>Default tooltip</h4>
+	<p><a class="btn" id="test-default-tooltip">Open tooltip</a></p>
+	<h4>Options menu</h4>
+	<p><a class="btn" id="test-options-menu">Open options menu</a> <a class="btn" id="test-options-menu-long" style="margin-left:5px;">Open options long menu</a></p>
+	<h4>Tooltip with overlay</h4>
+	<p><a class="btn" id="test-tooltip-overlay">Open tooltip with overlay</a></p>
+	<h4>Onload</h4>
+	<p><a class="btn" id="test-onload">Open onload example</a></p>
+</div>
 
-    <div class="download">
-      <a href="https://github.com/celtric/mgExternal/zipball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/zip.png"></a>
-      <a href="https://github.com/celtric/mgExternal/tarball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/tar.png"></a>
-    </div>
+<script>
 
-    <h1><a href="https://github.com/celtric/mgExternal">mgExternal</a>
-      <span class="small">by <a href="https://github.com/celtric">celtric</a></span></h1>
+$(document).live('a[href="#"]').click(function(e){
+	if (e.which == 1)
+		e.preventDefault();
+});
 
-    <div class="description">
-      
-    </div>
+$('#test-default-modal').mgExternal(
+	'<p>This is a modal default call. <a href="#" class="mgExternal-close">Close</a></p>'
+	+ '<p class="faded">You can press ESC or click outside to close this window.</p>', {
+	css: {
+		padding: 30
+	}
+});
 
-    
+$('#test-default-modal-long').mgExternal(
+	'<p>This is a modal default call. <a href="#" class="mgExternal-close">Close</a></p>'
+	+ '<p class="faded">You can press ESC or click outside to close this window.</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>', {
+	css: {
+		padding: 30,
+		width: 450
+	}
+});
 
-    
+$('#test-default-modal-nooverlay').mgExternal(
+	'<p>This is a modal default call. <a href="#" class="mgExternal-close">Close</a></p>'
+	+ '<p class="faded">You can press ESC or click outside to close this window.</p>', {
+	overlayShow: false,
+	css: {
+		padding: 30
+	}
+});
 
-    
+$('#test-default-modal-nooverlay-long').mgExternal(
+	'<p>This is a modal default call. <a href="#" class="mgExternal-close">Close</a></p>'
+	+ '<p class="faded">You can press ESC or click outside to close this window.</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>'
+	+ '<p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus</p>', {
+	overlayShow: false,
+	css: {
+		padding: 30,
+		width: 450
+	}
+});
 
-    
+$('#test-default-tooltip').mgExternal(
+	'<p>This is a tooltip default call. <a href="#" class="mgExternal-close">Close</a></p>'
+	+ '<p class="info"><strong>Hint:</strong> try to resize the window.</p>'
+	+ '<p class="faded">You can press ESC or click outside to close this window.</p>', {
+	display: 'tooltip',
+	css: {
+		padding: 15
+	}
+});
 
-    
+$('#test-options-menu').mgExternal({
+	display: 'tooltip',
+	extraClass: 'mgE-tooltip mgE-options',
+	ajaxUrl: 'test_ajax_options.html',
+	tooltip: {
+		arrowSize: 0,
+		position: 'bottom left'
+	}
+});
 
-    
-      <h2>Contact</h2>
-      <p> (celtric@gmail.com)<br/>      </p>
-    
+$('#test-options-menu-long').mgExternal({
+	display: 'tooltip',
+	extraClass: 'mgE-tooltip mgE-options',
+	ajaxUrl: 'test_ajax_options_long.html',
+	tooltip: {
+		arrowSize: 0,
+		position: 'bottom left'
+	}
+});
 
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="https://github.com/celtric/mgExternal/zipball/master">zip</a> or
-      <a href="https://github.com/celtric/mgExternal/tarball/master">tar formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/celtric/mgExternal</pre>
-    </p>
+$('#test-tooltip-overlay').mgExternal(
+	'<div class="modal-header" style="background-color:#fff;">'
+	+ '<h3>Tooltip with overlay</h3>'
+	+ '</div>'
+	+ '<div class="modal-body" style="background-color:#fff;">'
+	+ '<p>This is a tooltip with a white overlay.</p>'
+	+ '<p class="alert">It can\'t be closed by clicking outside or pressing ESC.</p>'
+	+ '</div>'
+	+ '<div class="modal-footer">'
+	+ '<a class="btn primary" href="#">Primary</a>'
+	+ '<a class="btn secondary mgExternal-close" href="#">Close</a>'
+	+ '</div>', {
+	display: 'tooltip',
+	overlayShow: true,
+	outsideClose: false,
+	escClose: false,
+	css: {
+		backgroundColor: '#f5f5f5'
+	},
+	tooltip: {
+		position: 'right bottom'
+	}
+});
 
-    <div class="footer">
-      get the source code on GitHub : <a href="https://github.com/celtric/mgExternal">celtric/mgExternal</a>
-    </div>
+$('#test-onload').mgExternal({
+	ajaxUrl: 'test_ajax_onload.html',
+	css: {
+		padding: 30
+	}
+});
 
-  </div>
+</script>
 
 </body>
 </html>
