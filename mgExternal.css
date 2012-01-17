@@ -1,5 +1,15 @@
 /*** mgExternal ***/
 
+/*
+ * normalize.css forces the HTML tag to have a scrollbar. In onjunction with
+ * mgExternal's modal scrolling, it makes the page jump at the top everytime
+ * a modal window is opened. With this fix we leave the HTML tag alone and set
+ * the exact same property but in the BODY tag (which works as expected).
+ */
+
+html { overflow-y: visible !important; }
+body { overflow-y: scroll; }
+
 /* Style: default modal */
 .mgE-modal .mgExternal-content {
 	background-color: #fff;

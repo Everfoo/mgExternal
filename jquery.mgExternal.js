@@ -12,11 +12,6 @@
 
 (function($, undefined){
 
-//---[ normalize.css fix ]----------------------------------------------------//
-
-$('html').css('overflowY', 'visible');
-$('body').css('overflowY', 'scroll');
-
 //---[ jQuery plugin ]--------------------------------------------------------//
 
 $.fn.mgExternal = function(defaultContent, options) {
