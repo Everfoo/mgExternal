@@ -28,7 +28,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		return new mgExternal(trigger, defaultContent, options);
 
 	// trigger is optional when used only once. Eg: mgExternal("Hi!");
-	if (!trigger || trigger.tagName === undefined) {
+	if (!trigger || !trigger.nodeType) {
 		options = defaultContent;
 		defaultContent = trigger;
 		trigger = null;
