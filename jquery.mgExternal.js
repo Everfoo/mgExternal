@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.22
+ * mgExternal 1.0.23
  *
  * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
@@ -41,6 +41,10 @@ window.mgExternal = function(trigger, defaultContent, options) {
 		defaultContent = null;
 	}
 
+	// Unique identifier
+	this._unique = Math.random().toString().substr(2);
+	mgExternal.instances.register(this, this._unique);
+
 	// Default settings
 	this.settings = {
 
@@ -78,7 +82,9 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 		// Ajax
 		ajaxUrl: null, // URL to fetch data from (if no defaultContent is provided or a form is sent)
-		ajaxData: {}, // Additional arguments to be sent
+		ajaxData: { // Additional arguments to be sent
+			'mgExternal-unique': this._unique
+		},
 
 		// Modal settings
 		modal: {
@@ -174,6 +180,21 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	// Auto-open if set
 	if (this.settings.auto)
 		this.open();
+};
+
+//---[ Instances ]------------------------------------------------------------//
+
+mgExternal.instances = {
+
+	_instances: {},
+
+	register: function(instance, unique) {
+		this._instances[unique] = instance;
+	},
+
+	get: function(unique) {
+		return this._instances[unique];
+	}
 };
 
 //---[ mgExternal prototype ]-------------------------------------------------//
@@ -401,9 +422,6 @@ mgExternal.prototype = {
 			self.close();
 			e.preventDefault();
 		});
-		var onLoad = this.$content.find('.mgExternal-onLoad').data('mgExternal-onLoad');
-		if (onLoad)
-			onLoad.call(this);
 	},
 
 	loadAjaxContent: function(submit) {
