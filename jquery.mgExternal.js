@@ -698,29 +698,33 @@ mgExternal.prototype = {
 
 		//---[ Fix narrow blocks past body width ]----------------------------//
 
-		var $tempContainer = this.$container.clone();
+		if (!this.settings.css.height || !this.settings.css.width) {
 
-		$tempContainer
-			.css({
-				left: 0,
-				top: 0,
-				position: 'absolute',
-				visibility: 'hidden'
-			})
-			.children()
+			var $tempContainer = this.$container.clone();
+
+			$tempContainer
 				.css({
-					height: '',
-					width: ''
+					left: 0,
+					top: 0,
+					position: 'absolute',
+					visibility: 'hidden'
 				})
-				.end()
-			.show()
-			.appendTo('body');
+				.children()
+					.css({
+						height: this.settings.css.height || '',
+						width: this.settings.css.width || ''
+					})
+					.end()
+				.show()
+				.appendTo('body');
 
-		this.$content
-			.css('height', this.settings.css.height || '').css('height', $tempContainer.children().height())
-			.css('width', this.settings.css.width || '').css('width',  $tempContainer.children().width());
+			this.$content.css({
+				height: $tempContainer.children().height(),
+				width: $tempContainer.children().width()
+			});
 
-		$tempContainer.remove();
+			$tempContainer.remove();
+		}
 
 		//---[ Useful vars ]--------------------------------------------------//
 
