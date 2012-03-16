@@ -130,6 +130,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	this._lastSubmitName = null;
 	this._show = false;
 	this._triggerZIndexBackup = null;
+	this._preventNextMouseUp = false;
 
 	// Set trigger bindings
 	if (this.$trigger) {
@@ -319,6 +320,10 @@ mgExternal.prototype = {
 				.last()
 					.css('margin-bottom', '0');
 
+		this.$container.find('img').bind('load', function(){
+			self.moveContainer(true);
+		});
+
 		if (!this.isVisible()) {
 			if (this.settings.display == 'modal' && this.settings.overlayShow)
 				this.$container.parent().css('visibility', 'hidden').show();
@@ -367,9 +372,9 @@ mgExternal.prototype = {
 			if (self.settings.display == 'modal' && self.settings.overlayShow)
 				self.$container.parent().show();
 			self.moveContainer(true, true);
-			self.$container.find('img').bind('load', function(){
+			/*self.$container.find('img').bind('load', function(){
 				self.moveContainer(true);
-			});
+			});*/
 			self.$container.fadeIn(self.settings.showSpeed, function(){
 				self.setFocus();
 				self.settings.onShow.call(self);
@@ -559,9 +564,10 @@ mgExternal.prototype = {
 						.appendTo('body')
 					: 'body')
 				.bind('mouseup', function(e){
-					e.stopPropagation(); // Required if outsideClose is set to true.
-					                     // mouseup event is used instead of click
-					                     // due to IE incompatibility
+					// Required if outsideClose is set to true.
+					// mouseup event is used instead of click
+					// due to IE incompatibility
+					self._preventNextMouseUp = true;
 				});
 
 			this.$content = $('<div/>')
@@ -587,7 +593,9 @@ mgExternal.prototype = {
 				// body instead of document as clicking on the sidebar would
 				// trigger the event.
 				$('body').bind('mouseup', function(e){
-					if (e.which == 1) {
+					if (self._preventNextMouseUp) {
+						self._preventNextMouseUp = false;
+					} else if (e.which == 1) {
 						// Workaround for Firefox as it fires mouseup events when clicking on the scrollbar
 						if (!e.originalEvent.originalTarget || !(e.originalEvent.originalTarget instanceof XULElement))
 							self.close();
@@ -719,7 +727,7 @@ mgExternal.prototype = {
 				.appendTo('body');
 
 			this.$content.css({
-				height: $tempContainer.children().height(),
+				//height: $tempContainer.children().height(),
 				width: $tempContainer.children().width()
 			});
 
