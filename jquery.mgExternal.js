@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.23
+ * mgExternal 1.0.24
  *
  * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
@@ -208,7 +208,7 @@ mgExternal.prototype = {
 		if (this.settings.display == 'inline') {
 			return true;
 		} else {
-			return this.$container && this.$container.is(':visible') && this.$container.css('visibility') != 'hidden';
+			return this.$container && this.$container.is(':visible');
 		}
 	},
 
@@ -227,7 +227,7 @@ mgExternal.prototype = {
 		var self = this;
 
 		// New content
-		if (!this.isVisible() && (this.settings.renew || !this.$container)) {
+		if (this.settings.renew || !this.$container) {
 			this.settings.ajaxUrl = this._defaultAjaxUrl;
 			this._lastSubmitName = null;
 
@@ -237,9 +237,6 @@ mgExternal.prototype = {
 				this.setContent(this._defaultContent);
 			} else if (url.match(/\.(jpg|gif|png|bmp|jpeg)(.*)?$/i)) {
 				this.setContent('<img src="'+url+'" style="display:block;" />');
-				setTimeout(function(){
-					self.moveContainer();
-				}, 1000);
 			} else {
 				this.loadAjaxContent();
 			}
@@ -307,8 +304,15 @@ mgExternal.prototype = {
 		// We remove the margin for the first DIV element due to aesthetical
 		// reasons. If you wish to maintain those proportions, you should set
 		// the equivalent padding in settings.css
+		this.$content.clone().appendTo(this.$container);
 		this.$content
 			.html(html)
+			.css({
+				left: 0,
+				top: 0,
+				position: 'absolute',
+				visibility: 'hidden'
+			})
 			.children()
 				.css({
 					marginLeft: 0,
@@ -318,38 +322,49 @@ mgExternal.prototype = {
 					.css('margin-top', '0')
 					.end()
 				.last()
-					.css('margin-bottom', '0');
-
-		this.$container.find('img').bind('load', function(){
-			self.moveContainer(true);
-		});
-
-		if (!this.isVisible()) {
-			if (this.settings.display == 'modal' && this.settings.overlayShow)
-				this.$container.parent().css('visibility', 'hidden').show();
-			this.$container.css('visibility', 'hidden').show();
-		}
+					.css('margin-bottom', '0')
+					.end()
+				.end()
+			.appendTo('body');
 
 		this.bindSpecialActions();
-		this.setFocus();
 		this.settings.onContentReady.call(this);
 
-		if (this.settings.display != 'inline') {
-			if (this.isVisible()) {
-				this.moveContainer();
-			} else {
-				if (this.settings.display == 'modal' && this.settings.overlayShow)
-					this.$container.parent().hide().css('visibility', 'visible');
-				this.$container.hide().css('visibility', 'visible');
-				this.showContainer();
-			}
+		var proceed = function() {
+			self.$container.empty();
+			self.$content.css({
+				left: '',
+				top: '',
+				position: '',
+				visibility: ''
+			}).appendTo(self.$container);
+
+			if (self.isVisible())
+				self.setFocus();
+
+			self.showContainer();
+		}
+
+		var $images = this.$content.find('img');
+
+		if ($images.length) {
+			var loadedImages = 0;
+			$images.on('load', function(){
+				if (++loadedImages >= $images.length)
+					proceed();
+			});
+		} else {
+			proceed();
 		}
 	},
 
 	showContainer: function() {
 
-		if (this.settings.onBeforeShow.call(this) === false)
+		if (this.settings.display == 'inline' || this.settings.onBeforeShow.call(this) === false)
 			return;
+
+		if (this.isVisible())
+			return this.moveContainer();
 
 		var self = this;
 
@@ -372,9 +387,6 @@ mgExternal.prototype = {
 			if (self.settings.display == 'modal' && self.settings.overlayShow)
 				self.$container.parent().show();
 			self.moveContainer(true, true);
-			/*self.$container.find('img').bind('load', function(){
-				self.moveContainer(true);
-			});*/
 			self.$container.fadeIn(self.settings.showSpeed, function(){
 				self.setFocus();
 				self.settings.onShow.call(self);
@@ -413,12 +425,15 @@ mgExternal.prototype = {
 	},
 
 	bindSpecialActions: function() {
+
 		var self = this;
+
 		this.$content.find('form').bind('submit', function(e){
 			self.loadAjaxContent($(this));
 			e.preventDefault();
 		});
 		this.$content.find('.mgExternal-redirect').bind('click', function(e){
+			$(this).addClass(self.settings.loadingClass);
 			self.settings.ajaxUrl = $(this).attr('href');
 			self.loadAjaxContent();
 			e.preventDefault();
@@ -430,6 +445,7 @@ mgExternal.prototype = {
 	},
 
 	loadAjaxContent: function(submit) {
+
 		var self = this,
 			ajaxData = $.extend({}, self.settings.ajaxData);
 
@@ -708,30 +724,26 @@ mgExternal.prototype = {
 
 		if (!this.settings.css.height || !this.settings.css.width) {
 
-			var $tempContainer = this.$container.clone();
+			var $tempContent = this.$content.clone();
 
-			$tempContainer
+			$tempContent
 				.css({
 					left: 0,
 					top: 0,
 					position: 'absolute',
-					visibility: 'hidden'
+					visibility: 'hidden',
+					height: this.settings.css.height || '',
+					width: this.settings.css.width || ''
 				})
-				.children()
-					.css({
-						height: this.settings.css.height || '',
-						width: this.settings.css.width || ''
-					})
-					.end()
 				.show()
 				.appendTo('body');
 
 			this.$content.css({
-				//height: $tempContainer.children().height(),
-				width: $tempContainer.children().width()
+				//height: $tempContent.children().height(),
+				width: $tempContent.width()
 			});
 
-			$tempContainer.remove();
+			$tempContent.remove();
 		}
 
 		//---[ Useful vars ]--------------------------------------------------//
@@ -884,6 +896,7 @@ mgExternal.prototype = {
 
 			if (position == 'top' || position == 'bottom') {
 				this.$tooltipArrow.css({
+					bottom: position == 'top' ? -arrowSize : '',
 					height: arrowSize,
 					left: (containerWidth < sourceWidth)
 						? (containerWidth / 2) - arrowSize
@@ -901,6 +914,7 @@ mgExternal.prototype = {
 				});
 			} else {
 				this.$tooltipArrow.css({
+					bottom: '',
 					height: arrowSize*2,
 					left: position == 'left' ? '' : -arrowSize,
 					right: position == 'right' ? '' : -arrowSize,
