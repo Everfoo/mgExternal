@@ -331,7 +331,7 @@ mgExternal.prototype = {
 		this.settings.onContentReady.call(this);
 
 		var proceed = function() {
-			self.$container.empty();
+			self.$container.find('.mgExternal-content').remove();
 			self.$content.css({
 				left: '',
 				top: '',
