@@ -20,6 +20,10 @@ $.fn.mgExternal = function(defaultContent, options) {
 	});
 };
 
+$.expr[':'].mgExternal = function(elem) {
+	return !!$(elem).data('mgExternal');
+};
+
 //---[ mgExternal constructor ]-----------------------------------------------//
 
 window.mgExternal = function(trigger, defaultContent, options) {
@@ -100,7 +104,8 @@ window.mgExternal = function(trigger, defaultContent, options) {
 			arrowSize: 8, // Arrow size in pixels
 			arrowDistance: 15,
 			arrowFrontColor: null, // Default front color is set in the CSS file,
-			arrowBorderColor: null // Default border color is set in the CSS file
+			arrowBorderColor: null, // Default border color is set in the CSS file
+			fit: true
 		},
 
 		// Callbacks
@@ -712,10 +717,19 @@ mgExternal.prototype = {
 		if (left < 0)
 			left = 0;
 
-		if (this.settings.modal.animateSpeed > 0 && !instant)
-			this.$container.stop().animate({top: top, left: left, opacity: 1}, this.settings.modal.animateSpeed);
-		else
-			this.$container.stop().css({top: top, left: left, opacity: 1});
+		if (this.settings.modal.animateSpeed > 0 && !instant) {
+			this.$container.stop().animate({
+				top: top,
+				left: left,
+				opacity: 1
+			}, this.settings.modal.animateSpeed);
+		} else {
+			this.$container.stop().css({
+				top: top,
+				left: left,
+				opacity: 1
+			});
+		}
 	},
 
 	moveTooltip: function() {
@@ -724,26 +738,29 @@ mgExternal.prototype = {
 
 		if (!this.settings.css.height || !this.settings.css.width) {
 
-			var $tempContent = this.$content.clone();
+			var $tempContainer = this.$container.clone();
 
-			$tempContent
+			$tempContainer
 				.css({
 					left: 0,
 					top: 0,
-					position: 'absolute',
-					visibility: 'hidden',
-					height: this.settings.css.height || '',
-					width: this.settings.css.width || ''
+					visibility: 'hidden'
 				})
+				.find('.mgExternal-content')
+					.css({
+						height: this.settings.css.height || '',
+						width: this.settings.css.width || ''
+					})
+					.end()
 				.show()
 				.appendTo('body');
 
 			this.$content.css({
-				//height: $tempContent.children().height(),
-				width: $tempContent.width()
+				//height: $tempContainer.find('.mgExternal-content').height()
+				width: $tempContainer.find('.mgExternal-content').width()
 			});
 
-			$tempContent.remove();
+			$tempContainer.remove();
 		}
 
 		//---[ Useful vars ]--------------------------------------------------//
@@ -767,17 +784,20 @@ mgExternal.prototype = {
 
 		//---[ Fit in window 1 ]----------------------------------------------//
 
-		if (position == 'bottom' && windowHeight < (sourceOffset.top - scrollTop + sourceHeight + containerHeight + breatheSeparation))
-			position = 'top';
+		if (this.settings.tooltip.fit) {
 
-		if (position == 'top' && (sourceOffset.top - scrollTop - breatheSeparation) < containerHeight)
-			position = 'bottom';
+			if (position == 'bottom' && windowHeight < (sourceOffset.top - scrollTop + sourceHeight + containerHeight + breatheSeparation))
+				position = 'top';
 
-		if (position == 'right' && windowWidth < (sourceOffset.left - scrollLeft + sourceWidth + containerWidth + breatheSeparation))
-			position = 'left';
+			if (position == 'top' && (sourceOffset.top - scrollTop - breatheSeparation) < containerHeight)
+				position = 'bottom';
 
-		if (position == 'left' && (sourceOffset.left - scrollLeft - breatheSeparation) < containerWidth)
-			position = 'right';
+			if (position == 'right' && windowWidth < (sourceOffset.left - scrollLeft + sourceWidth + containerWidth + breatheSeparation))
+				position = 'left';
+
+			if (position == 'left' && (sourceOffset.left - scrollLeft - breatheSeparation) < containerWidth)
+				position = 'right';
+		}
 
 		//---[ Position ]-----------------------------------------------------//
 
@@ -821,68 +841,71 @@ mgExternal.prototype = {
 
 		//---[ Fit in window 2 ]----------------------------------------------//
 
-		var move, posFit;
+		if (this.settings.tooltip.fit) {
 
-		if (position == 'left' || position == 'right') {
-			posFit = {
-				pos: 'top',
-				source: sourceHeight,
-				sourceOffset: sourceOffset.top,
-				container: containerHeight,
-				window: windowHeight,
-				scroll: scrollTop
-			};
-		} else {
-			posFit = {
-				pos: 'left',
-				source: sourceWidth,
-				sourceOffset: sourceOffset.left,
-				container: containerWidth,
-				window: windowWidth,
-				scroll: scrollLeft
-			};
-		}
+			var move, posFit;
 
-		while ((pos[posFit.pos] - posFit.scroll + posFit.container + breatheSeparation) > posFit.window) {
-			move = false;
-			if (posFit.container >= posFit.source) {
-				if ((pos[posFit.pos] + posFit.container) > (posFit.sourceOffset + posFit.source))
-					move = true;
+			if (position == 'left' || position == 'right') {
+				posFit = {
+					pos: 'top',
+					source: sourceHeight,
+					sourceOffset: sourceOffset.top,
+					container: containerHeight,
+					window: windowHeight,
+					scroll: scrollTop
+				};
 			} else {
-				if (pos[posFit.pos] > posFit.sourceOffset)
-					move = true;
+				posFit = {
+					pos: 'left',
+					source: sourceWidth,
+					sourceOffset: sourceOffset.left,
+					container: containerWidth,
+					window: windowWidth,
+					scroll: scrollLeft
+				};
 			}
-			if (move) pos[posFit.pos]--; else break;
-		}
 
-		while ((pos[posFit.pos] - posFit.scroll) < breatheSeparation) {
-			move = false;
-			if (posFit.container >= posFit.source) {
-				if (pos[posFit.pos] < posFit.sourceOffset)
-					move = true;
-			} else {
-				if ((pos[posFit.pos] + posFit.container) < (posFit.sourceOffset + posFit.source))
-					move = true;
-			}
-			if (move) pos[posFit.pos]++; else break;
-		}
-
-		if (arrowSize && posFit.source < (arrowSize + arrowDistance*2)) {
-			var arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos],
-			    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
-
-			if (!(arrowSeparationTop < arrowDistance && arrowSeparationBottom < arrowDistance)) {
-				if (arrowSeparationTop < arrowDistance) {
-					pos[posFit.pos] = posFit.sourceOffset + (posFit.source / 2) - arrowSize - arrowDistance;
+			while ((pos[posFit.pos] - posFit.scroll + posFit.container + breatheSeparation) > posFit.window) {
+				move = false;
+				if (posFit.container >= posFit.source) {
+					if ((pos[posFit.pos] + posFit.container) > (posFit.sourceOffset + posFit.source))
+						move = true;
+				} else {
+					if (pos[posFit.pos] > posFit.sourceOffset)
+						move = true;
 				}
-				if (arrowSeparationBottom < arrowDistance) {
-					pos[posFit.pos] = posFit.sourceOffset - posFit.container + (posFit.source / 2) + arrowSize + arrowDistance;
+				if (move) pos[posFit.pos]--; else break;
+			}
+
+			while ((pos[posFit.pos] - posFit.scroll) < breatheSeparation) {
+				move = false;
+				if (posFit.container >= posFit.source) {
+					if (pos[posFit.pos] < posFit.sourceOffset)
+						move = true;
+				} else {
+					if ((pos[posFit.pos] + posFit.container) < (posFit.sourceOffset + posFit.source))
+						move = true;
+				}
+				if (move) pos[posFit.pos]++; else break;
+			}
+
+			if (arrowSize && posFit.source < (arrowSize + arrowDistance*2)) {
+				var arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos],
+				    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
+
+				if (!(arrowSeparationTop < arrowDistance && arrowSeparationBottom < arrowDistance)) {
+					if (arrowSeparationTop < arrowDistance) {
+						pos[posFit.pos] = posFit.sourceOffset + (posFit.source / 2) - arrowSize - arrowDistance;
+					}
+					if (arrowSeparationBottom < arrowDistance) {
+						pos[posFit.pos] = posFit.sourceOffset - posFit.container + (posFit.source / 2) + arrowSize + arrowDistance;
+						arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos];
+					}
 					arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos];
+				    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
+					if (arrowSeparationTop < arrowDistance || arrowSeparationBottom < arrowDistance)
+						pos[posFit.pos] = posFit.sourceOffset - ((posFit.container - (arrowSize * 2)) / 2);
 				}
-				arrowSeparationTop = posFit.sourceOffset + (posFit.source / 2) - arrowSize - pos[posFit.pos];
-			    arrowSeparationBottom = pos[posFit.pos] + posFit.container - posFit.sourceOffset - (posFit.source / 2) - arrowSize;
-				if (arrowSeparationTop < arrowDistance || arrowSeparationBottom < arrowDistance)
-					pos[posFit.pos] = posFit.sourceOffset - ((posFit.container - (arrowSize * 2)) / 2);
 			}
 		}
 
