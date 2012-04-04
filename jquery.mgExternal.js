@@ -1,5 +1,5 @@
 /**
- * mgExternal 1.0.24
+ * mgExternal 1.0.25
  *
  * Copyright 2012 Ricard Osorio Mañanas
  * Dual licensed under the MIT or GPL Version 2 licenses.
@@ -247,7 +247,7 @@ mgExternal.prototype = {
 			}
 		}
 		// Show existing content
-		else {
+		else if (!this.isVisible()) {
 			this.showContainer();
 		}
 	},
@@ -299,12 +299,18 @@ mgExternal.prototype = {
 		}
 	},
 
-	setContent: function(html) {
+	setContent: function(html, modalContentChangeAnimation) {
 
 		var self = this;
 
 		if (!this.$container && this.settings.display != 'inline')
 			this.createElements();
+
+		if (this.settings.display == 'modal') {
+			modalContentChangeAnimation = modalContentChangeAnimation || {type: 'resize'};
+			modalContentChangeAnimation.preHeight = this.$content.height();
+			modalContentChangeAnimation.preWidth = this.$content.width();
+		}
 
 		// We remove the margin for the first DIV element due to aesthetical
 		// reasons. If you wish to maintain those proportions, you should set
@@ -344,10 +350,12 @@ mgExternal.prototype = {
 				visibility: ''
 			}).appendTo(self.$container);
 
-			if (self.isVisible())
+			if (self.isVisible()) {
 				self.setFocus();
-
-			self.showContainer();
+				return self.moveContainer(modalContentChangeAnimation);
+			} else {
+				self.showContainer();
+			}
 		}
 
 		var $images = this.$content.find('img');
@@ -367,9 +375,6 @@ mgExternal.prototype = {
 
 		if (this.settings.display == 'inline' || this.settings.onBeforeShow.call(this) === false)
 			return;
-
-		if (this.isVisible())
-			return this.moveContainer();
 
 		var self = this;
 
@@ -391,7 +396,12 @@ mgExternal.prototype = {
 		var fadeInContainer = function(){
 			if (self.settings.display == 'modal' && self.settings.overlayShow)
 				self.$container.parent().show();
-			self.moveContainer(true, true);
+
+			// Set correct position before showing
+			self.$container.css('visibility', 'hidden').show();
+			self.moveContainer({type: 'instant'});
+			self.$container.hide().css('visibility', '');
+
 			self.$container.fadeIn(self.settings.showSpeed, function(){
 				self.setFocus();
 				self.settings.onShow.call(self);
@@ -434,13 +444,32 @@ mgExternal.prototype = {
 		var self = this;
 
 		this.$content.find('form').bind('submit', function(e){
-			self.loadAjaxContent($(this));
+			self.loadAjaxContent($(this), {type: 'move'});
 			e.preventDefault();
 		});
-		this.$content.find('.mgExternal-redirect').bind('click', function(e){
-			$(this).addClass(self.settings.loadingClass);
-			self.settings.ajaxUrl = $(this).attr('href');
-			self.loadAjaxContent();
+		this.$content.find('[class*="mgExternal-redirect"]').bind('click', function(e){
+			var $elem = $(this);
+
+			$elem.addClass(self.settings.loadingClass);
+
+			var modalContentChangeAnimation = {};
+
+			if (self.settings.display == 'modal') {
+				if ($elem.is('[class*="redirect-fade"]')) {
+					modalContentChangeAnimation.type = 'fade';
+					self.$container.fadeOut();
+				} else if ($elem.is('[class*="redirect-move"]')) {
+					modalContentChangeAnimation.type = 'move';
+				} else if ($elem.is('[class*="redirect-instant"]')) {
+					modalContentChangeAnimation.type = 'instant';
+				} else {
+					modalContentChangeAnimation.type = 'resize';
+				}
+			}
+
+			self.settings.ajaxUrl = $elem.attr('href');
+			self.loadAjaxContent(null, modalContentChangeAnimation);
+
 			e.preventDefault();
 		});
 		this.$content.find('.mgExternal-close').bind('click', function(e){
@@ -449,7 +478,7 @@ mgExternal.prototype = {
 		});
 	},
 
-	loadAjaxContent: function(submit) {
+	loadAjaxContent: function(submit, modalContentChangeAnimation) {
 
 		var self = this,
 			ajaxData = $.extend({}, self.settings.ajaxData);
@@ -492,7 +521,7 @@ mgExternal.prototype = {
 						}
 					} catch (err) {}
 					// ... or just plain HTML?
-					self.setContent(response);
+					self.setContent(response, modalContentChangeAnimation);
 				});
 
 			// Leave a visible copy of the form for usability reasons (we'll move the original)
@@ -521,13 +550,13 @@ mgExternal.prototype = {
 					if (typeof data == 'object') {
 						self.settings.onJsonData.call(self, data);
 					} else {
-						self.setContent(data);
+						self.setContent(data, modalContentChangeAnimation);
 					}
 				},
 				error: function(jqXHR, textStatus, errorThrown){
 					self.$trigger.removeClass(self.settings.loadingClass);
 
-					self.setContent('<div class="notice alert">S\'ha produït un error</div>');
+					self.setContent('<div class="notice alert">S\'ha produït un error</div>', modalContentChangeAnimation);
 				}
 			});
 		}
@@ -677,14 +706,14 @@ mgExternal.prototype = {
 		}
 	},
 
-	moveContainer: function(force, instant) {
+	moveContainer: function(modalContentChangeAnimation) {
 
-		if (!force && !this.isVisible())
+		if (!this.isVisible())
 			return;
 
 		switch (this.settings.display) {
 			case 'modal':
-				this.moveModal(instant);
+				this.moveModal(modalContentChangeAnimation);
 				break;
 			case 'tooltip':
 				this.moveTooltip();
@@ -692,12 +721,29 @@ mgExternal.prototype = {
 		}
 	},
 
-	moveModal: function(instant) {
-		var top = 0,
+	moveModal: function(modalContentChangeAnimation) {
+
+		var self = this,
+		    top = 0,
 		    left = 0,
 		    breatheSeparation = this.settings.breatheSeparation;
 
 		this.$container.css('padding', breatheSeparation+'px 0 '+(breatheSeparation*2)+'px');
+
+		modalContentChangeAnimation = modalContentChangeAnimation || {type: 'resize'};
+
+		if (!modalContentChangeAnimation.preHeight || !modalContentChangeAnimation.preWidth) {
+			modalContentChangeAnimation.preHeight = this.$content.height();
+			modalContentChangeAnimation.preWidth = this.$content.width();
+		}
+
+		this.$content.stop().css({
+			height: this.settings.css.height || '',
+			width: this.settings.css.width || ''
+		});
+
+		modalContentChangeAnimation.postHeight = this.$content.height();
+		modalContentChangeAnimation.postWidth = this.$content.width();
 
 		var containerHeight = this.$container.outerHeight(true),
 		    containerWidth = this.$container.outerWidth(true),
@@ -717,18 +763,50 @@ mgExternal.prototype = {
 		if (left < 0)
 			left = 0;
 
-		if (this.settings.modal.animateSpeed > 0 && !instant) {
-			this.$container.stop().animate({
-				top: top,
-				left: left,
-				opacity: 1
-			}, this.settings.modal.animateSpeed);
-		} else {
-			this.$container.stop().css({
-				top: top,
-				left: left,
-				opacity: 1
-			});
+		switch (modalContentChangeAnimation.type) {
+
+			case 'fade':
+				this.$container.stop().css({
+					top: top,
+					left: left
+				}).animate({
+					opacity: 1
+				}, this.settings.modal.animateSpeed);
+				break;
+
+			case 'move':
+				this.$container.stop().animate({
+					top: top,
+					left: left,
+					opacity: 1
+				}, this.settings.modal.animateSpeed);
+				break;
+
+			case 'instant':
+				this.$container.stop().css({
+					top: top,
+					left: left,
+					opacity: 1
+				});
+				break;
+
+			case 'resize':
+			default:
+				this.$content.css({
+					height: modalContentChangeAnimation.preHeight,
+					width: modalContentChangeAnimation.preWidth
+				}).animate({
+					height: modalContentChangeAnimation.postHeight,
+					width: modalContentChangeAnimation.postWidth
+				}, this.settings.modal.animateSpeed, function(){
+					self.$content.css('height', self.settings.css.height || '');
+				});
+				this.$container.stop().animate({
+					top: top,
+					left: left,
+					opacity: 1
+				}, this.settings.modal.animateSpeed);
+				break;
 		}
 	},
 
