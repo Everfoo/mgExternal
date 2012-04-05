@@ -562,7 +562,17 @@ mgExternal.prototype = {
 		}
 
 		if (this.$content)
-			this.$content.find(':input').prop('disabled', true).addClass('disabled');
+			this.setLoadingState();
+	},
+
+	setLoadingState: function() {
+		this.$content.find(':input').prop('disabled', true).addClass('disabled');
+		this.$content.find('.mgExternal-loading').show();
+	},
+
+	disableLoadingState: function() {
+		this.$content.find(':input').prop('disabled', false).removeClass('disabled');
+		this.$content.find('.mgExternal-loading').hide();
 	},
 
 	setFocus: function() {
