@@ -136,6 +136,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 	this._show = false;
 	this._triggerZIndexBackup = null;
 	this._preventNextMouseUp = false;
+	this._moveTooltipTimeout = null;
 
 	// Set trigger bindings
 	if (this.$trigger) {
@@ -312,9 +313,6 @@ mgExternal.prototype = {
 			modalContentChangeAnimation.preWidth = this.$content.width();
 		}
 
-		// We remove the margin for the first DIV element due to aesthetical
-		// reasons. If you wish to maintain those proportions, you should set
-		// the equivalent padding in settings.css
 		this.$content.clone().appendTo(this.$container);
 		this.$content
 			.html(html)
@@ -324,6 +322,9 @@ mgExternal.prototype = {
 				position: 'absolute',
 				visibility: 'hidden'
 			})
+			// We remove the margin for the first DIV element due to aesthetical
+			// reasons. If you wish to maintain those proportions, you should set
+			// the equivalent padding in settings.css
 			.children()
 				.css({
 					marginLeft: 0,
@@ -822,33 +823,44 @@ mgExternal.prototype = {
 
 	moveTooltip: function() {
 
+		var self = this;
+
 		//---[ Fix narrow blocks past body width ]----------------------------//
 
 		if (!this.settings.css.height || !this.settings.css.width) {
 
-			var $tempContainer = this.$container.clone();
+			if (!this._moveTooltipTimeout) {
 
-			$tempContainer
-				.css({
-					left: 0,
-					top: 0,
-					visibility: 'hidden'
-				})
-				.find('.mgExternal-content')
+				// Create a temp container once every 200ms, to avoid browser
+				// slowness when scrolling
+				this._moveTooltipTimeout = setTimeout(function(){
+					self._moveTooltipTimeout = null;
+				}, 200);
+
+				var $tempContainer = this.$container.clone();
+
+				$tempContainer
 					.css({
-						height: this.settings.css.height || '',
-						width: this.settings.css.width || ''
+						left: 0,
+						top: 0,
+						visibility: 'hidden'
 					})
-					.end()
-				.show()
-				.appendTo('body');
+					.find('.mgExternal-content')
+						.css({
+							height: this.settings.css.height || '',
+							width: this.settings.css.width || ''
+						})
+						.end()
+					.show()
+					.appendTo('body');
 
-			this.$content.css({
-				//height: $tempContainer.find('.mgExternal-content').height()
-				width: $tempContainer.find('.mgExternal-content').width()
-			});
+				this.$content.css({
+					//height: $tempContainer.find('.mgExternal-content').height()
+					width: $tempContainer.find('.mgExternal-content').width()
+				});
 
-			$tempContainer.remove();
+				$tempContainer.remove();
+			}
 		}
 
 		//---[ Useful vars ]--------------------------------------------------//
