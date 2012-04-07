@@ -214,7 +214,7 @@ mgExternal.prototype = {
 		if (this.settings.display == 'inline') {
 			return true;
 		} else {
-			return this.$container && this.$container.is(':visible');
+			return !!this.$container && this.$container.is(':visible');
 		}
 	},
 
@@ -654,12 +654,16 @@ mgExternal.prototype = {
 				// body instead of document as clicking on the sidebar would
 				// trigger the event.
 				$('body').bind('mouseup', function(e){
-					if (self._preventNextMouseUp) {
-						self._preventNextMouseUp = false;
-					} else if (e.which == 1) {
-						// Workaround for Firefox as it fires mouseup events when clicking on the scrollbar
-						if (!e.originalEvent.originalTarget || !(e.originalEvent.originalTarget instanceof XULElement))
-							self.close();
+					// tooltip bind == 'click' gives problems in certain situations
+					// (showSpeed == 0 && hideSpeed == 0)
+					if (!self.$trigger.is(e.target) && !self.$trigger.find(e.target).length) {
+						if (self._preventNextMouseUp) {
+							self._preventNextMouseUp = false;
+						} else if (e.which == 1 && self.isVisible()) {
+							// Workaround for Firefox as it fires mouseup events when clicking on the scrollbar
+							if (!e.originalEvent.originalTarget || !(e.originalEvent.originalTarget instanceof XULElement))
+								self.close();
+						}
 					}
 				});
 			}
