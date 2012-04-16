@@ -47,7 +47,7 @@ window.mgExternal = function(trigger, defaultContent, options) {
 
 	// Unique identifier
 	this._unique = Math.random().toString().substr(2);
-	mgExternal.instances.register(this, this._unique);
+	mgExternal.instances.register(this);
 
 	// Default settings
 	this.settings = {
@@ -195,8 +195,8 @@ mgExternal.instances = {
 
 	_instances: {},
 
-	register: function(instance, unique) {
-		this._instances[unique] = instance;
+	register: function(instance) {
+		this._instances[instance._unique] = instance;
 	},
 
 	get: function(unique) {
@@ -221,6 +221,11 @@ mgExternal.prototype = {
 	open: function(delay) {
 		var self = this;
 		this._show = true;
+
+		// Avoid button flicker on instant content
+		if (this._defaultContent)
+			this.$trigger.addClass(this.settings.activeClass);
+
 		delay ? setTimeout(function(){self._open()}, delay) : this._open(); // Using a delay value of `0` would still
 		                                                                    // create a noticeable visual effect
 	},
